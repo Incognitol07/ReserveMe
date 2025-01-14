@@ -8,66 +8,233 @@ from fastapi import (
     Depends
 )
 from uuid import UUID
+from sqlalchemy import DateTime
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-from app.models import booking, Booking, User
-from app.utils import logger
+from app.models import Booking, Space, User
+from app.utils import logger, get_current_user, admin_required
 from app.database import get_db
+from app.schemas import (
+    BookingUpdate,
+    BookingCreate,
+    BookingResponse
+)
 
-booking_router = APIRouter(prefix="/bookings")
+booking_router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
-@booking_router.get("/")
-async def get_all_bookings(db:Session = Depends(get_db)):
-    bookings = db.query(booking).all()
-    return bookings
+@booking_router.get("/", response_model=list[BookingResponse])
+async def get_all_bookings(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
+    current_user: User =Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch all bookings with pagination.
+    Only accessible to authenticated users.
+    """
+    try:
+        bookings = (
+            db.query(Booking)
+            .filter(Booking.user_id == current_user.id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        return bookings
+    except Exception as e:
+        logger.error(f"Error fetching bookings: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
-@booking_router.post("/")
-async def create_booking(db: Session = Depends(get_db)):
-    ...
+
+@booking_router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
+async def create_booking(
+    booking: BookingCreate,
+    current_user: User =Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Create a new booking.
+    Requires authentication.
+    """
+    try:
+        new_booking = Booking(**booking.dict(), user_id=current_user.id)
+        db.add(new_booking)
+        db.commit()
+        db.refresh(new_booking)
+        return new_booking
+    except SQLAlchemyError as e:
+        logger.error(f"Failed to create booking: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@booking_router.get("/{booking_id}")
+@booking_router.get("/{booking_id}", response_model=BookingResponse)
 async def get_booking(
     booking_id: UUID,
-    db:Session = Depends(get_db)
+    current_user: User =Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    booking = db.query(booking).filter(Booking.id == booking_id).first()
-    if not booking:
+    """
+    Fetch a booking by ID.
+    Accessible only to the owner of the booking or an admin.
+    """
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking or (booking.user_id != current_user.id and not current_user.is_admin):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to access this booking."
         )
     return booking
 
-@booking_router.get("/{booking_id}")
+
+@booking_router.put("/{booking_id}", response_model=BookingResponse)
 async def update_booking(
     booking_id: UUID,
-    update_booking,
-    db:Session = Depends(get_db)
+    update_data: BookingUpdate,
+    current_user: User =Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    booking = db.query(booking).filter(Booking.id == booking_id).first()
-
-    if not booking:
+    """
+    Update a booking by ID.
+    Accessible only to the owner of the booking.
+    """
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking or booking.user_id != current_user.id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to update this booking."
         )
-
-    for key, value in update_booking.model_dump().items():
+    
+    for key, value in update_data.model_dump(exclude_unset=True).items():
         setattr(booking, key, value)
 
-    db.commit()
-    db.refresh(booking)
-    return 
+    try:
+        db.commit()
+        db.refresh(booking)
+        return booking
+    except SQLAlchemyError as e:
+        logger.error(f"Error updating booking {booking_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@booking_router.delete("/{booking_id}")
+@booking_router.delete("/{booking_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_booking(
     booking_id: UUID,
-    db:Session = Depends(get_db)
+    current_user: User =Depends(get_current_user),
+    db: Session = Depends(get_db),
 ):
-    booking = db.query(booking).filter(Booking.id == booking_id).first()
-    if not booking:
+    """
+    Delete a booking by ID.
+    Accessible only to the owner of the booking or an admin.
+    """
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking or (booking.user_id != current_user.id and not current_user.is_admin):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete this booking."
         )
 
-    return booking
+    try:
+        db.delete(booking)
+        db.commit()
+        return {"message": "Booking deleted successfully"}
+    except SQLAlchemyError as e:
+        logger.error(f"Error deleting booking {booking_id}: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@booking_router.get("/search", response_model=list[BookingResponse])
+async def search_bookings(
+    query: str = Query(..., description="Search term for bookings (e.g., purpose or space name)"),
+    current_user: User =Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Search bookings by purpose or related space name.
+    Only accessible to authenticated users.
+    """
+    try:
+        bookings = (
+            db.query(Booking)
+            .join(Space, Booking.space_id == Space.id)
+            .filter(
+                (Booking.purpose.ilike(f"%{query}%")) |
+                (Space.name.ilike(f"%{query}%"))
+            )
+            .filter(Booking.user_id == current_user.id)
+            .all()
+        )
+        return bookings
+    except Exception as e:
+        logger.error(f"Error searching bookings: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@booking_router.patch("/{booking_id}/status", response_model=BookingResponse)
+async def update_booking_status(
+    booking_id: UUID,
+    status: str = Query(..., regex="^(pending|confirmed|canceled)$", description="New status for the booking"),
+    current_user: User =Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Update the status of a booking.
+    Only accessible to admins.
+    """
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only admins can update booking status."
+        )
+
+    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    if not booking:
+        raise HTTPException(status_code=404, detail="Booking not found")
+
+    try:
+        booking.status = status
+        db.commit()
+        db.refresh(booking)
+        return booking
+    except SQLAlchemyError as e:
+        logger.error(f"Error updating booking status: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@booking_router.get("/available-spaces", response_model=list[Space])
+async def get_available_spaces(
+    start_time: DateTime,
+    end_time: DateTime,
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch all available spaces for a specific time range.
+    """
+    try:
+        spaces = db.query(Space).filter(
+            Space.is_available == True,
+            ~Space.bookings.any(
+                (Booking.start_time < end_time) & (Booking.end_time > start_time)
+            )
+        ).all()
+        return spaces
+    except Exception as e:
+        logger.error(f"Error fetching available spaces: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@booking_router.get("/admin/all", response_model=list[BookingResponse])
+async def admin_get_all_bookings(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
+    current_user: User =Depends(admin_required),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch all bookings for admin review with pagination.
+    """
+    try:
+        bookings = db.query(Booking).offset(skip).limit(limit).all()
+        return bookings
+    except Exception as e:
+        logger.error(f"Error fetching bookings for admin: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")

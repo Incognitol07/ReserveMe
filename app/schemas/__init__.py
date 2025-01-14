@@ -8,3 +8,8 @@ from .auth import (
     RefreshToken,
     UserResponse
 )
+from .booking import (
+    BookingCreate,
+    BookingResponse,
+    BookingUpdate
+)
