@@ -33,13 +33,16 @@ class UserLogin(UserBase):
     password: str
 
 
-class UserResponse(UserBase):
+class UserResponse(BaseModel):
     id: UUID
-    message: str
+    username: str
+    email: EmailStr
+    joined_at: datetime
+    last_login: datetime | None
+    is_active: bool
 
     class Config:
         from_attributes = True
-
 
 class RegisterResponse(BaseModel):
     username: str

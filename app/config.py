@@ -8,11 +8,11 @@ load_dotenv()
 
 class Settings(BaseSettings):
     # Application settings
-    APP_NAME: str = "App Name"
+    APP_NAME: str = "ReserveMe API"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")  # Default to 'development'
     DEBUG: bool = ENVIRONMENT == "development"
 
-    DATABASE_URL: str =os.getenv("DATABASE_URL")
+    DATABASE_URL: str = os.getenv("DATABASE_URL")
 
     # JWT and authentication settings
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "myjwtsecretkey")  # Default secret

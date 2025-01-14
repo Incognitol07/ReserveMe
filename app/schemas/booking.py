@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Optional
 
 class BookingCreate(BaseModel):
-    user_id: int = Field(..., description="The ID of the user making the booking")
     space_id: int = Field(..., description="The ID of the space being booked")
     start_time: datetime = Field(..., description="The start time of the booking")
     end_time: datetime = Field(..., description="The end time of the booking")
@@ -28,4 +27,4 @@ class BookingResponse(BaseModel):
     total_cost: float
 
     class Config:
-        orm_mode = True
+        from_attributes = True

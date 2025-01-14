@@ -8,7 +8,7 @@ from fastapi import (
     Depends
 )
 from uuid import UUID
-from sqlalchemy import DateTime
+from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from app.models import Booking, Space, User
@@ -17,10 +17,77 @@ from app.database import get_db
 from app.schemas import (
     BookingUpdate,
     BookingCreate,
-    BookingResponse
+    BookingResponse,
+    SpaceResponse
 )
 
 booking_router = APIRouter(prefix="/bookings", tags=["Bookings"])
+
+@booking_router.get("/search", response_model=list[BookingResponse])
+async def search_bookings(
+    query: str = Query(..., description="Search term for bookings (e.g., purpose or space name)"),
+    current_user: User =Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Search bookings by purpose or related space name.
+    Only accessible to authenticated users.
+    """
+    try:
+        bookings = (
+            db.query(Booking)
+            .join(Space, Booking.space_id == Space.id)
+            .filter(
+                (Booking.purpose.ilike(f"%{query}%")) |
+                (Space.name.ilike(f"%{query}%"))
+            )
+            .filter(Booking.user_id == current_user.id)
+            .all()
+        )
+        return bookings
+    except Exception as e:
+        logger.error(f"Error searching bookings: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+    
+
+@booking_router.get("/available-spaces", response_model=list[SpaceResponse])
+async def get_available_spaces(
+    start_time: datetime,
+    end_time: datetime,
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch all available spaces for a specific time range.
+    """
+    try:
+        spaces = db.query(Space).filter(
+            Space.is_available == True,
+            ~Space.bookings.any(
+                (Booking.start_time < end_time) & (Booking.end_time > start_time)
+            )
+        ).all()
+        return spaces
+    except Exception as e:
+        logger.error(f"Error fetching available spaces: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@booking_router.get("/admin/all", response_model=list[BookingResponse])
+async def admin_get_all_bookings(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
+    current_user: User =Depends(admin_required),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch all bookings for admin review with pagination.
+    """
+    try:
+        bookings = db.query(Booking).offset(skip).limit(limit).all()
+        return bookings
+    except Exception as e:
+        logger.error(f"Error fetching bookings for admin: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 @booking_router.get("/", response_model=list[BookingResponse])
 async def get_all_bookings(
@@ -58,7 +125,7 @@ async def create_booking(
     Requires authentication.
     """
     try:
-        new_booking = Booking(**booking.dict(), user_id=current_user.id)
+        new_booking = Booking(**booking.model_dump(), user_id=current_user.id)
         db.add(new_booking)
         db.commit()
         db.refresh(new_booking)
@@ -142,37 +209,12 @@ async def delete_booking(
         logger.error(f"Error deleting booking {booking_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-@booking_router.get("/search", response_model=list[BookingResponse])
-async def search_bookings(
-    query: str = Query(..., description="Search term for bookings (e.g., purpose or space name)"),
-    current_user: User =Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    """
-    Search bookings by purpose or related space name.
-    Only accessible to authenticated users.
-    """
-    try:
-        bookings = (
-            db.query(Booking)
-            .join(Space, Booking.space_id == Space.id)
-            .filter(
-                (Booking.purpose.ilike(f"%{query}%")) |
-                (Space.name.ilike(f"%{query}%"))
-            )
-            .filter(Booking.user_id == current_user.id)
-            .all()
-        )
-        return bookings
-    except Exception as e:
-        logger.error(f"Error searching bookings: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @booking_router.patch("/{booking_id}/status", response_model=BookingResponse)
 async def update_booking_status(
     booking_id: UUID,
-    status: str = Query(..., regex="^(pending|confirmed|canceled)$", description="New status for the booking"),
+    status_sent: str = Query(..., regex="^(pending|confirmed|canceled)$", description="New status for the booking"),
     current_user: User =Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -188,10 +230,10 @@ async def update_booking_status(
 
     booking = db.query(Booking).filter(Booking.id == booking_id).first()
     if not booking:
-        raise HTTPException(status_code=404, detail="Booking not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
     try:
-        booking.status = status
+        booking.status = status_sent
         db.commit()
         db.refresh(booking)
         return booking
@@ -200,41 +242,3 @@ async def update_booking_status(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@booking_router.get("/available-spaces", response_model=list[Space])
-async def get_available_spaces(
-    start_time: DateTime,
-    end_time: DateTime,
-    db: Session = Depends(get_db),
-):
-    """
-    Fetch all available spaces for a specific time range.
-    """
-    try:
-        spaces = db.query(Space).filter(
-            Space.is_available == True,
-            ~Space.bookings.any(
-                (Booking.start_time < end_time) & (Booking.end_time > start_time)
-            )
-        ).all()
-        return spaces
-    except Exception as e:
-        logger.error(f"Error fetching available spaces: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-
-@booking_router.get("/admin/all", response_model=list[BookingResponse])
-async def admin_get_all_bookings(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
-    current_user: User =Depends(admin_required),
-    db: Session = Depends(get_db),
-):
-    """
-    Fetch all bookings for admin review with pagination.
-    """
-    try:
-        bookings = db.query(Booking).offset(skip).limit(limit).all()
-        return bookings
-    except Exception as e:
-        logger.error(f"Error fetching bookings for admin: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")

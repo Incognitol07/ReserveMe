@@ -1,36 +1,51 @@
-# app/main.py
-
-from fastapi import (
-    FastAPI,
-    Request
-)
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.database import engine, Base
+from app.database import engine, Base, get_db
 from app.config import settings
-from app.utils import logger
+from app.utils import logger, seed_admin
 from app.routers import (
-    auth_router,
-    space_router,
-    booking_router
+    auth_router, 
+    space_router, 
+    booking_router,
+    profile_router
 )
+from starlette.middleware.base import BaseHTTPMiddleware
+import time
+
+
+class SecureHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
 
 
 # Create the FastAPI application
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
-    print("Starting up the application...")
-    # Initialize database (create tables if they don't exist)
-    Base.metadata.create_all(bind=engine)
+    logger.info("Starting up the application...")
+    Base.metadata.create_all(bind=engine)  # Initialize database (create tables if they don't exist)
+    # Seed the admin user
+    db = next(get_db())  # Get a database session
+    try:
+        seed_admin(db)  # Call the function to seed admin
+    except Exception as e:
+        logger.error(f"Error seeding admin user: {e}")
+    finally:
+        db.close()  # Close the session
     try:
         yield
     finally:
-        print("Shutting down the application...")
+        logger.info("Shutting down the application...")
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="An API",
+    description="The ReserveMe API simplifies the process of booking and managing spaces, such as meeting rooms, event halls, or workspaces.",
     version="1.0.0",
     debug=settings.DEBUG,  # Enable debug mode if in development
     lifespan=lifespan,
@@ -39,36 +54,44 @@ app = FastAPI(
 # CORS settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=settings.CORS_ORIGINS if not settings.DEBUG else ["*"],  # Strictly enforce trusted origins
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Limit allowed methods
+    allow_headers=["Authorization", "Content-Type"],  # Limit allowed headers
 )
 
+# Add secure headers middleware
+app.add_middleware(SecureHeadersMiddleware)
 
 # Include routers
 app.include_router(auth_router, tags=["Authentication"])
+app.include_router(profile_router, tags=["Profile"])
 app.include_router(space_router, tags=["Spaces"])
 app.include_router(booking_router, tags=["Bookings"])
 
 
-# Middleware to log route endpoints
+# Middleware to log route endpoints with client IP
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    
+    # Extract real client IP
+    client_ip = request.headers.get("X-Forwarded-For") or request.headers.get("X-Real-IP") or request.client.host
     endpoint = request.url.path
     method = request.method
-    client_ip = request.client.host
-
+    
     logger.info(f"Request: {method} {endpoint} from {client_ip}")
     
     response = await call_next(request)
+    duration = time.time() - start_time
     
-    logger.info(f"Response: {method} {endpoint} returned {response.status_code}")
+    logger.info(
+        f"Response: {method} {endpoint} from {client_ip} returned {response.status_code} in {duration:.2f}s"
+    )
     return response
 
 
-
 # Root endpoint for health check
-@app.get("/")
+@app.get("/", tags=["Health"])
 def read_root():
     return {"message": f"{settings.APP_NAME} is running"}

@@ -13,3 +13,8 @@ from .booking import (
     BookingResponse,
     BookingUpdate
 )
+from .space import (
+    SpaceCreateSchema,
+    SpaceResponse, 
+    SpaceUpdateSchema
+)
