@@ -1,11 +1,11 @@
 # app/routers/profile.py
 
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.models import User
 from app.utils import logger, get_current_user, hash_password, verify_password
 from app.database import get_db
-from app.schemas import UserResponse, DetailResponse
+from app.schemas import UserResponse, DetailResponse, UpdatePasswordRequest, UpdateProfileRequest
 
 profile_router = APIRouter(prefix="/me")
 
@@ -19,49 +19,44 @@ def get_profile(
     """
     return user
 
-
 @profile_router.put("/update-password", response_model=DetailResponse)
 def update_password(
-    current_password: str = Body(..., embed=True),
-    new_password: str = Body(..., embed=True),
+    payload: UpdatePasswordRequest,  # Schema for request body
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
     """
     Allows a user to update their password after verifying the current one.
     """
-    if not verify_password(current_password, user.password):
+    if not verify_password(payload.current_password, user.password):
         logger.warning(f"Password update failed for user ID {user.id}: Incorrect password.")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Current password is incorrect."
         )
 
-    user.password = hash_password(new_password)
+    user.password = hash_password(payload.new_password)
     db.commit()
     logger.info(f"User ID {user.id} updated their password.")
     return {"detail": "Password updated successfully."}
 
-
 @profile_router.put("/update-profile", response_model=UserResponse)
 def update_profile(
-    username: str | None = Body(None, embed=True),
-    email: str | None = Body(None, embed=True),
+    payload: UpdateProfileRequest,  # Schema for request body
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
     """
     Update the user's profile information.
     """
-    if username:
-        user.username = username
-    if email:
-        user.email = email
+    if payload.username:
+        user.username = payload.username
+    if payload.email:
+        user.email = payload.email
 
     db.commit()
     logger.info(f"User ID {user.id} updated their profile.")
     return user
-
 
 @profile_router.put("/reactivate", response_model=DetailResponse)
 def reactivate_account(

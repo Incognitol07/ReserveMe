@@ -18,3 +18,7 @@ from .space import (
     SpaceResponse, 
     SpaceUpdateSchema
 )
+from .profile import (
+    UpdatePasswordRequest,
+    UpdateProfileRequest
+)
