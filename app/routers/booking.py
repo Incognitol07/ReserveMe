@@ -206,6 +206,7 @@ async def update_booking(
         db.refresh(booking)
         return booking
     except SQLAlchemyError as e:
+        db.rollback()
         logger.error(f"Error updating booking {booking_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
@@ -232,6 +233,7 @@ async def delete_booking(
         db.commit()
         return {"message": "Booking deleted successfully"}
     except SQLAlchemyError as e:
+        db.rollback()
         logger.error(f"Error deleting booking {booking_id}: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
@@ -264,6 +266,6 @@ async def update_booking_status(
         db.refresh(booking)
         return booking
     except SQLAlchemyError as e:
+        db.rollback()
         logger.error(f"Error updating booking status: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-    

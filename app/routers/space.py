@@ -35,6 +35,7 @@ async def get_all_spaces(db: Session = Depends(get_db)):
         spaces = db.query(Space).all()
         return spaces
     except SQLAlchemyError as e:
+        db.rollback()
         logger.error(f"Error fetching spaces: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -71,6 +72,7 @@ async def create_space(
         logger.info(f"Space created: {new_space.name}")
         return {"message": "Space created successfully", "space": new_space}
     except SQLAlchemyError as e:
+        db.rollback()
         logger.error(f"Error creating space: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -100,6 +102,7 @@ async def update_space(
         logger.info(f"Space updated: {space.name}")
         return {"message": "Space updated successfully", "space": space}
     except SQLAlchemyError as e:
+        db.rollback()
         logger.error(f"Error updating space: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -123,6 +126,7 @@ async def delete_space(space_id: UUID, db: Session = Depends(get_db)):
         logger.info(f"Space deleted: {space.name}")
         return {"message": "Space deleted successfully"}
     except SQLAlchemyError as e:
+        db.rollback()
         logger.error(f"Error deleting space: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
