@@ -51,23 +51,33 @@ async def search_bookings(
         raise HTTPException(status_code=500, detail="Internal Server Error")
     
 
-@booking_router.get("/available-spaces", response_model=list[SpaceResponse])
-async def get_available_spaces(
-    start_time: datetime,
-    end_time: datetime,
+@booking_router.get("/taken")
+async def get_taken_bookings(
     db: Session = Depends(get_db),
 ):
     """
-    Fetch all available spaces for a specific time range.
+    Fetch all taken bookings.
     """
     try:
-        spaces = db.query(Space).filter(
-            Space.is_available == True,
-            ~Space.bookings.any(
-                (Booking.start_time < end_time) & (Booking.end_time > start_time)
-            )
+        bookings = db.query(Booking).filter(
+            Booking.end_time>=datetime.now(), 
+            Booking.status=="confirmed"
         ).all()
-        return spaces
+        if not bookings:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Taken bookings not found"
+            )
+        return [
+            {
+                "start_time": booking.start_time,
+                "end_time": booking.end_time
+            }
+            for booking in bookings
+            ]
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
         logger.error(f"Error fetching available spaces: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -118,7 +128,7 @@ async def get_all_bookings(
 @booking_router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
 async def create_booking(
     booking: BookingCreate,
-    current_user: User =Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -126,13 +136,28 @@ async def create_booking(
     Requires authentication.
     """
     try:
+        # Check for booking conflicts
+        check_booking = db.query(Booking).filter(
+            (Booking.start_time < booking.end_time) & 
+            (Booking.end_time > booking.start_time)
+        ).first()
+        
+        if check_booking:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Booking conflict: Existing booking from {check_booking.start_time} to {check_booking.end_time}"
+            )
+
+        # Create the booking
         new_booking = Booking(**booking.model_dump(), user_id=current_user.id)
         db.add(new_booking)
         db.commit()
         db.refresh(new_booking)
         return new_booking
+
     except SQLAlchemyError as e:
-        logger.error(f"Failed to create booking: {e}")
+        db.rollback()
+        logger.error(f"Failed to create booking for user {current_user.id}: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
@@ -241,5 +266,4 @@ async def update_booking_status(
     except SQLAlchemyError as e:
         logger.error(f"Error updating booking status: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
-
-
+    
