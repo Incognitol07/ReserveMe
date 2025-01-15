@@ -12,7 +12,10 @@ from uuid import UUID
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from app.models import Space
-from app.utils import logger, get_current_user, admin_required
+from app.utils import (
+    logger,
+    admin_required
+)
 from app.database import get_db
 from app.schemas import (
     SpaceResponse,
@@ -54,7 +57,7 @@ async def get_space(space_id: UUID, db: Session = Depends(get_db)):
 
 @space_router.post("/", dependencies=[Depends(admin_required)])
 async def create_space(
-    space_data: SpaceCreateSchema = Body(...),
+    space_data: SpaceCreateSchema,
     db: Session = Depends(get_db),
 ):
     """
@@ -78,7 +81,7 @@ async def create_space(
 @space_router.put("/{space_id}", dependencies=[Depends(admin_required)])
 async def update_space(
     space_id: UUID,
-    update_data: SpaceUpdateSchema = Body(...),
+    update_data: SpaceUpdateSchema,
     db: Session = Depends(get_db),
 ):
     """

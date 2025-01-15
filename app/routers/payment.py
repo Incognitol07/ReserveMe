@@ -9,7 +9,11 @@ from app.utils import (
     get_transaction_details,
     list_transactions,
 )
-from app.schemas.payment import PaymentRequest, PaymentResponse, PaymentVerificationRequest
+from app.schemas import (
+    PaymentRequest, 
+    PaymentResponse, 
+    PaymentVerificationRequest
+)
 from app.database import get_db
 from app.utils import logger
 
@@ -68,7 +72,7 @@ def fetch_transaction_details(transaction_id: str, db: Session = Depends(get_db)
         )
 
 
-@payment_router.get("/list", response_model=dict)
+@payment_router.get("/list", response_model=list)
 def list_all_transactions(db: Session = Depends(get_db)):
     """
     Lists all transactions.

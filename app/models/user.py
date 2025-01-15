@@ -1,7 +1,7 @@
 # app/models/user.py
 
 from uuid import uuid4
-from sqlalchemy import Column, UUID, String, Boolean, DateTime, Text, Integer
+from sqlalchemy import Column, UUID, String, Boolean, DateTime, Integer
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
