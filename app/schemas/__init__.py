@@ -11,7 +11,8 @@ from .auth import (
 from .booking import (
     BookingCreate,
     BookingResponse,
-    BookingUpdate
+    BookingUpdate,
+    AdminBookingResponse
 )
 from .space import (
     SpaceCreateSchema,

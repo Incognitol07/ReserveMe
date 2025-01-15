@@ -1,25 +1,38 @@
-from pydantic import BaseModel, Field, UUID4
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 class BookingCreate(BaseModel):
-    space_id: int = Field(..., description="The ID of the space being booked")
-    start_time: datetime = Field(..., description="The start time of the booking")
-    end_time: datetime = Field(..., description="The end time of the booking")
+    space_id: UUID
+    start_time: datetime
+    end_time: datetime
     purpose: str = Field(..., max_length=500, description="Purpose of the booking")
-    total_cost: float = Field(..., ge=0, description="Total cost of the booking")
+    total_cost: float 
 
 class BookingUpdate(BaseModel):
-    start_time: Optional[datetime] = Field(None, description="The updated start time")
-    end_time: Optional[datetime] = Field(None, description="The updated end time")
-    purpose: Optional[str] = Field(None, max_length=500, description="Updated purpose of the booking")
-    status: Optional[str] = Field(None, description="Updated status of the booking")
-    total_cost: Optional[float] = Field(None, ge=0, description="Updated total cost")
+    start_time: Optional[datetime]
+    end_time: Optional[datetime] 
+    purpose: Optional[str]
+    status: Optional[str] 
+    total_cost: Optional[float]
 
 class BookingResponse(BaseModel):
-    id: UUID4
-    user_id: int
-    space_id: int
+    id: UUID
+    space_id: UUID
+    start_time: datetime
+    end_time: datetime
+    purpose: str
+    status: str
+    total_cost: float
+
+    class Config:
+        from_attributes = True
+
+class AdminBookingResponse(BaseModel):
+    id: UUID
+    user_id: UUID
+    space_id: UUID
     start_time: datetime
     end_time: datetime
     purpose: str

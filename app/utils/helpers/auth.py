@@ -12,7 +12,6 @@ from app.utils import (
 )
 from app.database import get_db
 
-
 # OAuth2 scheme to retrieve token from Authorization header
 # The `tokenUrl` specifies the endpoint for obtaining a token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -54,22 +53,42 @@ async def get_current_user(
             logger.error("Invalid token payload: Missing 'sub' field.")
             raise credentials_exception
 
-        # Query the user by username from the database
         db_user = db.query(User).filter(User.username == username).first()
-        if db_user is None:
-            logger.warning(f"Unauthorized access attempt by unknown user '{username}'.")
+        if not db_user or db_user.is_deleted:
+            logger.warning(f"Unauthorized access attempt by user '{username}'.")
             raise credentials_exception
 
         logger.info(f"User '{username}' authenticated successfully.")
         return db_user
-    except Exception as e:
-        logger.error(f"Error during user authentication: {e}")
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
         raise
+    except Exception as e:
+        logger.error(f"Unexpected error during user authentication: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal server error occurred during authentication",
+        )
+
 
 async def admin_required(current_user: User = Depends(get_current_user)):
-    if current_user.is_admin != True:
+    """
+    Checks if the current user is an admin.
+
+    Args:
+        current_user (User): The authenticated user object.
+
+    Raises:
+        HTTPException: If the user is not an admin.
+
+    Returns:
+        User: The authenticated admin user.
+    """
+    if not current_user.is_admin:
+        logger.warning(f"User '{current_user.username}' attempted unauthorized admin action.")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You do not have permission to perform this action",
         )
+    logger.info(f"Admin access granted to user '{current_user.username}'.")
     return current_user

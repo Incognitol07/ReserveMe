@@ -17,6 +17,7 @@ class User(Base):
     joined_at = Column(DateTime, default=datetime.now)
     last_login = Column(DateTime, nullable=True)  # Track login activity
     failed_login_attempts = Column(Integer, default=0)  # Monitor brute force attempts
-    is_active = Column(Boolean, default=True)  # Soft delete or account suspension
+    is_active = Column(Boolean, default=True)  # Account suspension
+    is_deleted = Column(Boolean, default=False)  # Soft delete flag
 
     bookings = relationship("Booking", back_populates="user")

@@ -5,7 +5,13 @@ from sqlalchemy.orm import Session
 from app.models import User
 from app.utils import logger, get_current_user, hash_password, verify_password
 from app.database import get_db
-from app.schemas import UserResponse, DetailResponse, UpdatePasswordRequest, UpdateProfileRequest
+from app.schemas import (
+    UserResponse, 
+    DetailResponse, 
+    UpdatePasswordRequest, 
+    UpdateProfileRequest,
+    UserLogin
+)
 
 profile_router = APIRouter(prefix="/me")
 
@@ -18,6 +24,26 @@ def get_profile(
     Retrieve the currently authenticated user's profile.
     """
     return user
+
+@profile_router.delete("/", response_model=DetailResponse)
+def delete_account(
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """
+    Soft delete the currently authenticated user's account.
+    """
+    if user.is_deleted:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Account is already deleted."
+        )
+
+    user.is_deleted = True
+    user.is_active = False  # Mark the account inactive as well
+    db.commit()
+    logger.info(f"User ID {user.id} soft deleted their account.")
+    return {"detail": "Account deleted successfully."}
 
 @profile_router.put("/update-password", response_model=DetailResponse)
 def update_password(
@@ -58,21 +84,34 @@ def update_profile(
     logger.info(f"User ID {user.id} updated their profile.")
     return user
 
-@profile_router.put("/reactivate", response_model=DetailResponse)
-def reactivate_account(
-    db: Session = Depends(get_db), 
-    user: User = Depends(get_current_user)
+@profile_router.post("/reactivate", response_model=DetailResponse)
+def reactivate_account_with_password(
+    user: UserLogin,
+    db: Session = Depends(get_db),
 ):
     """
-    Reactivates a user's deactivated account.
+    Reactivates a soft-deleted account using username and password verification.
     """
-    if user.is_active:
+    # Fetch the user by username or email
+    user = db.query(User).filter(User.email == user.email, User.is_deleted == True).first()
+
+    if not user:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, 
-            detail="Account is already active."
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found or account is not deactivated."
         )
 
+    # Verify the provided password
+    if not verify_password(user.password, hash_password(user.password)):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect password."
+        )
+
+    # Reactivate the account
+    user.is_deleted = False
     user.is_active = True
     db.commit()
+
     logger.info(f"User ID {user.id} reactivated their account.")
-    return {"detail": f"Account '{user.username}' reactivated successfully."}
+    return {"detail": f"Account for '{user.username}' has been reactivated successfully."}

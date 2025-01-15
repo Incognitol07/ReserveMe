@@ -18,7 +18,8 @@ from app.schemas import (
     BookingUpdate,
     BookingCreate,
     BookingResponse,
-    SpaceResponse
+    SpaceResponse,
+    AdminBookingResponse
 )
 
 booking_router = APIRouter(prefix="/bookings", tags=["Bookings"])
@@ -72,7 +73,7 @@ async def get_available_spaces(
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
-@booking_router.get("/admin/all", response_model=list[BookingResponse])
+@booking_router.get("/admin/all", response_model=list[AdminBookingResponse])
 async def admin_get_all_bookings(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),

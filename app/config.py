@@ -15,7 +15,9 @@ class Settings(BaseSettings):
     DATABASE_URL: str = os.getenv("DATABASE_URL")
 
     # JWT and authentication settings
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "myjwtsecretkey")  # Default secret
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
+
+    PAYSTACK_SECRET_KEY: str = os.getenv("PAYSTACK_SECRET")
 
     # Other security settings
     ALLOWED_HOSTS: list = ["*"]

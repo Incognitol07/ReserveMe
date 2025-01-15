@@ -9,11 +9,11 @@ class Booking(Base):
     __tablename__ = "bookings"
 
     id = Column(UUID(as_uuid=True), default=uuid4, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    space_id = Column(Integer, ForeignKey("spaces.id"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    space_id = Column(UUID(as_uuid=True), ForeignKey("spaces.id"), nullable=False)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
-    status = Column(String, default="confirmed", nullable=False)  # Options: pending, confirmed, canceled
+    status = Column(String, default="confirmed", nullable=False)  # Options: confirmed, canceled
     total_cost = Column(Float, nullable=False)
     purpose = Column(Text, nullable=False)
     user = relationship("User", back_populates="bookings")
