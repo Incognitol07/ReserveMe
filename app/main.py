@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.database import engine, Base, get_db
 from app.config import settings
-from app.utils import logger, seed_admin
+from app.utils import logger, seed_admin, seed_user
 from app.routers import (
     auth_router, 
     space_router, 
@@ -37,6 +37,7 @@ async def lifespan(app: FastAPI):
     db = next(get_db())  # Get a database session
     try:
         seed_admin(db)  # Call the function to seed admin
+        seed_user(db)  # Call the function to seed user
     except Exception as e:
         logger.error(f"Error seeding admin user: {e}")
     finally:

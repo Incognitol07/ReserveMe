@@ -1,5 +1,5 @@
 from .auth import get_current_user, admin_required
-from .admin import seed_admin
+from .seed import seed_admin, seed_user
 from .payment import (
     initialize_transaction,
     verify_transaction,

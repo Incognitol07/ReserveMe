@@ -40,6 +40,13 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered",
         )
+    db_user = db.query(User).filter(User.username == user.username).first()
+    if db_user:
+        logger.warning(f"Attempt to register with an existing username: {user.username}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already registered"
+            )
 
     # Hash the password before storing
     password = hash_password(user.password)

@@ -11,6 +11,7 @@ from .helpers import (
     get_current_user, 
     admin_required, 
     seed_admin,
+    seed_user,
     initialize_transaction,
     verify_transaction,
     get_transaction_details,
