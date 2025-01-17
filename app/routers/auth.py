@@ -26,7 +26,7 @@ from app.utils import (
 from app.database import get_db
 
 MAX_FAILED_ATTEMPTS = 5
-LOCKOUT_DURATION = timedelta(minutes=15)
+LOCKOUT_DURATION = timedelta(minutes=1)
 
 auth_router = APIRouter(prefix="/auth")
 
@@ -80,19 +80,25 @@ async def user_login(user: UserLogin, db: Session = Depends(get_db)):
         )
 
     # Check if the user is locked out
-    if (
-        db_user.failed_login_attempts >= MAX_FAILED_ATTEMPTS
-        and datetime.now() - db_user.last_login <= LOCKOUT_DURATION
-    ):
-        logger.warning(f"Account locked due to multiple failed login attempts: {user.email}")
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Account locked. Try again later.",
-        )
+    now = datetime.now()
+    if db_user.failed_login_attempts >= MAX_FAILED_ATTEMPTS:
+        time_since_last_login = now - db_user.last_login
+
+        # Reset failed attempts if lockout duration has passed
+        if time_since_last_login > LOCKOUT_DURATION:
+            db_user.failed_login_attempts = 0
+            db.commit()
+        else:
+            logger.warning(f"Account locked due to multiple failed login attempts: {user.email}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account locked. Try again later.",
+            )
 
     # Verify the password
     if not verify_password(user.password, db_user.password):
         db_user.failed_login_attempts += 1
+        db_user.last_login = now  # Update last login to track failed attempts timing
         db.commit()
         logger.warning(f"Failed login attempt for email: {user.email}")
         raise HTTPException(
@@ -101,7 +107,7 @@ async def user_login(user: UserLogin, db: Session = Depends(get_db)):
 
     # Reset failed login attempts after successful login
     db_user.failed_login_attempts = 0
-    db_user.last_login = datetime.now()
+    db_user.last_login = now
     db.commit()
 
     # Generate tokens
