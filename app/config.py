@@ -19,6 +19,11 @@ class Settings(BaseSettings):
 
     PAYSTACK_SECRET_KEY: str = os.getenv("PAYSTACK_SECRET")
 
+    # Cloudinary
+    CLOUDINARY_CLOUD: str = os.getenv("CLOUDINARY_CLOUD")
+    CLOUDINARY_API_KEY: str= os.getenv("CLOUDINARY_API_KEY")
+    CLOUDINARY_API_SECRET: str= os.getenv("CLOUDINARY_API_SECRET")
+
     # Other security settings
     ALLOWED_HOSTS: list = ["*"]
     CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:5173"]  # Add frontend URL if applicable

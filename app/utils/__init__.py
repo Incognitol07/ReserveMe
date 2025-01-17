@@ -15,5 +15,6 @@ from .helpers import (
     initialize_transaction,
     verify_transaction,
     get_transaction_details,
-    list_transactions
+    list_transactions,
+    upload_image_to_cloudinary
 )

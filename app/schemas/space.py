@@ -10,7 +10,7 @@ class SpaceCreateSchema(BaseModel):
     capacity: int = Field(..., gt=0, description="Maximum capacity of the space")
     is_available: bool = Field(default=True, description="Availability status of the space")
     location: str = Field(..., max_length=255, description="Location of the space (e.g., address or coordinates)")
-    amenities: Optional[str] = Field(None, max_length=500, description="List of amenities provided (e.g., WiFi, projector)")
+    amenities: Optional[list[str]] = Field(None, max_length=500, description="List of amenities provided (e.g., WiFi, projector)")
     hourly_rate: float = Field(..., gt=0, description="Hourly rental rate for the space")
 
 
@@ -21,8 +21,9 @@ class SpaceResponse(BaseModel):
     capacity: int = Field(..., gt=0, description="Maximum capacity of the space")
     is_available: bool = Field(default=True, description="Availability status of the space")
     location: str = Field(..., max_length=255, description="Location of the space (e.g., address or coordinates)")
-    amenities: Optional[str] = Field(None, max_length=500, description="List of amenities provided (e.g., WiFi, projector)")
+    amenities: Optional[list[str]] = Field(None, max_length=500, description="List of amenities provided (e.g., WiFi, projector)")
     hourly_rate: float = Field(..., gt=0, description="Hourly rental rate for the space")
+    images: list[str]
 
     class Config:
         from_attributes = True  # Enables Pydantic to work seamlessly with SQLAlchemy models
@@ -34,5 +35,5 @@ class SpaceUpdateSchema(BaseModel):
     capacity: Optional[int] = Field(None, gt=0, description="Updated maximum capacity of the space")
     is_available: Optional[bool] = Field(None, description="Updated availability status of the space")
     location: Optional[str] = Field(None, max_length=255, description="Updated location of the space")
-    amenities: Optional[str] = Field(None, max_length=500, description="Updated list of amenities provided")
+    amenities: Optional[list[str]] = Field(None, max_length=500, description="Updated list of amenities provided")
     hourly_rate: Optional[float] = Field(None, gt=0, description="Updated hourly rental rate for the space")

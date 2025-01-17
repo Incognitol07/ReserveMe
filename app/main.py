@@ -13,6 +13,7 @@ from app.routers import (
     profile_router,
     payment_router
 )
+from app.utils import cloudinary  # This ensures the config is set
 from starlette.middleware.base import BaseHTTPMiddleware
 import time
 

@@ -6,3 +6,4 @@ from .payment import (
     list_transactions,
     get_transaction_details
 )
+from .cloudinary import upload_image_to_cloudinary
