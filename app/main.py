@@ -60,7 +60,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS if not settings.DEBUG else ["*"],  # Strictly enforce trusted origins
     allow_credentials=True,
-    allow_methods=["*"],  # Limit allowed methods
+    allow_methods=["*"],
     allow_headers=["Authorization", "Content-Type"],  # Limit allowed headers
 )
 
