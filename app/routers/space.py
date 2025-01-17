@@ -20,7 +20,8 @@ from app.database import get_db
 from app.schemas import (
     SpaceResponse,
     SpaceCreateSchema,
-    SpaceUpdateSchema
+    SpaceUpdateSchema,
+    DetailResponse
 )
 
 space_router = APIRouter(prefix="/spaces")
@@ -56,7 +57,7 @@ async def get_space(space_id: UUID, db: Session = Depends(get_db)):
     return space
 
 
-@space_router.post("/", dependencies=[Depends(admin_required)])
+@space_router.post("/", dependencies=[Depends(admin_required)], response_model=SpaceResponse)
 async def create_space(
     space_data: SpaceCreateSchema,
     db: Session = Depends(get_db),
@@ -70,7 +71,7 @@ async def create_space(
         db.commit()
         db.refresh(new_space)
         logger.info(f"Space created: {new_space.name}")
-        return {"message": "Space created successfully", "space": new_space}
+        return new_space
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error creating space: {e}")
@@ -80,7 +81,7 @@ async def create_space(
         )
 
 
-@space_router.put("/{space_id}", dependencies=[Depends(admin_required)])
+@space_router.put("/{space_id}", dependencies=[Depends(admin_required)], response_model=SpaceResponse)
 async def update_space(
     space_id: UUID,
     update_data: SpaceUpdateSchema,
@@ -100,7 +101,7 @@ async def update_space(
         db.commit()
         db.refresh(space)
         logger.info(f"Space updated: {space.name}")
-        return {"message": "Space updated successfully", "space": space}
+        return space
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error updating space: {e}")
@@ -110,7 +111,7 @@ async def update_space(
         )
 
 
-@space_router.delete("/{space_id}", dependencies=[Depends(admin_required)])
+@space_router.delete("/{space_id}", dependencies=[Depends(admin_required)], response_model=DetailResponse)
 async def delete_space(space_id: UUID, db: Session = Depends(get_db)):
     """
     Delete a space by ID. Admin only.
@@ -124,7 +125,7 @@ async def delete_space(space_id: UUID, db: Session = Depends(get_db)):
         db.delete(space)
         db.commit()
         logger.info(f"Space deleted: {space.name}")
-        return {"message": "Space deleted successfully"}
+        return {"detail": "Space deleted successfully"}
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error deleting space: {e}")

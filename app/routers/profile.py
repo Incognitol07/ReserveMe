@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import SQLAlchemyError
 from app.models import User
 from app.utils import (
     logger, 
@@ -38,17 +39,22 @@ def delete_account(
     """
     Soft delete the currently authenticated user's account.
     """
-    if user.is_deleted:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Account is already deleted."
-        )
+    try:
+        if user.is_deleted:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Account is already deleted."
+            )
 
-    user.is_deleted = True
-    user.is_active = False  # Mark the account inactive as well
-    db.commit()
-    logger.info(f"User ID {user.id} soft deleted their account.")
-    return {"detail": "Account deleted successfully."}
+        user.is_deleted = True
+        user.is_active = False  # Mark the account inactive as well
+        db.commit()
+        logger.info(f"User ID {user.id} soft deleted their account.")
+        return {"detail": "Account deleted successfully."}
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error deleting user ID: {user.id} : {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 @profile_router.put("/update-password", response_model=DetailResponse)
 def update_password(
@@ -59,17 +65,22 @@ def update_password(
     """
     Allows a user to update their password after verifying the current one.
     """
-    if not verify_password(payload.current_password, user.password):
-        logger.warning(f"Password update failed for user ID {user.id}: Incorrect password.")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Current password is incorrect."
-        )
+    try:
+        if not verify_password(payload.current_password, user.password):
+            logger.warning(f"Password update failed for user ID {user.id}: Incorrect password.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect."
+            )
 
-    user.password = hash_password(payload.new_password)
-    db.commit()
-    logger.info(f"User ID {user.id} updated their password.")
-    return {"detail": "Password updated successfully."}
+        user.password = hash_password(payload.new_password)
+        db.commit()
+        logger.info(f"User ID {user.id} updated their password.")
+        return {"detail": "Password updated successfully."}
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error updating password for user ID: {user.id} : {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 @profile_router.put("/update-profile", response_model=UserResponse)
 def update_profile(
@@ -80,14 +91,19 @@ def update_profile(
     """
     Update the user's profile information.
     """
-    if payload.username:
-        user.username = payload.username
-    if payload.email:
-        user.email = payload.email
+    try:
+        if payload.username:
+            user.username = payload.username
+        if payload.email:
+            user.email = payload.email
 
-    db.commit()
-    logger.info(f"User ID {user.id} updated their profile.")
-    return user
+        db.commit()
+        logger.info(f"User ID {user.id} updated their profile.")
+        return user
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error updating user ID: {user.id} : {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 @profile_router.post("/reactivate", response_model=DetailResponse)
 def reactivate_account_with_password(
@@ -97,26 +113,31 @@ def reactivate_account_with_password(
     """
     Reactivates a soft-deleted account using username and password verification.
     """
-    # Fetch the user by username or email
-    user = db.query(User).filter(User.email == user.email, User.is_deleted == True).first()
+    try:
+        # Fetch the user by username or email
+        user = db.query(User).filter(User.email == user.email, User.is_deleted == True).first()
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found or account is not deactivated."
-        )
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found or account is not deactivated."
+            )
 
-    # Verify the provided password
-    if not verify_password(user.password, hash_password(user.password)):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password."
-        )
+        # Verify the provided password
+        if not verify_password(user.password, hash_password(user.password)):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password."
+            )
 
-    # Reactivate the account
-    user.is_deleted = False
-    user.is_active = True
-    db.commit()
+        # Reactivate the account
+        user.is_deleted = False
+        user.is_active = True
+        db.commit()
 
-    logger.info(f"User ID {user.id} reactivated their account.")
-    return {"detail": f"Account for '{user.username}' has been reactivated successfully."}
+        logger.info(f"User ID {user.id} reactivated their account.")
+        return {"detail": f"Account for '{user.username}' has been reactivated successfully."}
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Error reactivating user ID: {user.id} : {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")

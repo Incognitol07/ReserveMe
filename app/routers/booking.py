@@ -19,7 +19,8 @@ from app.schemas import (
     BookingCreate,
     BookingResponse,
     AdminBookingResponse,
-    TakenBookingResponse
+    TakenBookingResponse,
+    DetailResponse
 )
 
 booking_router = APIRouter(prefix="/bookings", tags=["Bookings"])
@@ -48,7 +49,7 @@ async def search_bookings(
         return bookings
     except Exception as e:
         logger.error(f"Error searching bookings: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
     
 
 @booking_router.get("/taken", response_model=list[TakenBookingResponse])
@@ -110,7 +111,7 @@ async def admin_get_all_bookings(
         return bookings
     except Exception as e:
         logger.error(f"Error fetching bookings for admin: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 @booking_router.get("/", response_model=list[BookingResponse])
 async def get_all_bookings(
@@ -134,7 +135,7 @@ async def get_all_bookings(
         return bookings
     except Exception as e:
         logger.error(f"Error fetching bookings: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
 @booking_router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
@@ -170,7 +171,7 @@ async def create_booking(
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Failed to create booking for user {current_user.id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
 @booking_router.get("/{booking_id}", response_model=BookingResponse)
@@ -220,10 +221,10 @@ async def update_booking(
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error updating booking {booking_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
-@booking_router.delete("/{booking_id}", status_code=status.HTTP_204_NO_CONTENT)
+@booking_router.delete("/{booking_id}", response_model=DetailResponse)
 async def delete_booking(
     booking_id: UUID,
     current_user: User =Depends(get_current_user),
@@ -243,11 +244,11 @@ async def delete_booking(
     try:
         db.delete(booking)
         db.commit()
-        return {"message": "Booking deleted successfully"}
+        return {"detail": "Booking deleted successfully"}
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error deleting booking {booking_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
 
@@ -280,4 +281,4 @@ async def update_booking_status(
     except SQLAlchemyError as e:
         db.rollback()
         logger.error(f"Error updating booking status: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
