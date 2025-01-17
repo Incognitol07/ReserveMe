@@ -6,6 +6,4 @@ passlib[bcrypt]~=1.7
 databases~=0.5
 psycopg2-binary
 uvicorn[standard]~=0.23
-pytest~=7.4
 requests
-alembic

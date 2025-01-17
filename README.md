@@ -55,16 +55,8 @@ cd ReserveMe
 
 2. **Activate the virtual environment**:
 
-   - **Windows**:
-
      ```cmd
      .\venv\Scripts\activate
-     ```
-
-   - **Linux/Mac**:
-
-     ```bash
-     source venv/bin/activate
      ```
 
 3. **Install dependencies**:
@@ -83,14 +75,6 @@ cd ReserveMe
 
 Create a `.env` file:
 
-- **Linux/Mac**:
-
-  ```bash
-  cp .env.example .env
-  ```
-
-- **Windows**:
-
   ```cmd
   copy .env.example .env
   ```
@@ -99,8 +83,8 @@ Create a `.env` file:
 
 1. **Activate the virtual environment**:
 
-   ```bash
-   source venv/bin/activate  # Use appropriate command based on your OS
+   ```cmd
+   .\venv\Scripts\activate
    ```
 
 2. **Start the server**:
