@@ -43,3 +43,11 @@ class AdminBookingResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TakenBookingResponse(BaseModel):
+    space_id: UUID
+    start_time: datetime
+    end_time: datetime
+
+    class Config:
+        from_attributes = True

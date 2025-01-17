@@ -18,7 +18,6 @@ from app.schemas import (
     BookingUpdate,
     BookingCreate,
     BookingResponse,
-    SpaceResponse,
     AdminBookingResponse
 )
 
@@ -80,7 +79,7 @@ async def get_taken_bookings(
         raise
     except Exception as e:
         logger.error(f"Error fetching available spaces: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
 @booking_router.get("/admin/all", response_model=list[AdminBookingResponse])
