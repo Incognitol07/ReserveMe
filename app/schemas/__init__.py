@@ -12,7 +12,8 @@ from .booking import (
     BookingCreate,
     BookingResponse,
     BookingUpdate,
-    AdminBookingResponse
+    AdminBookingResponse,
+    TakenBookingResponse
 )
 from .space import (
     SpaceCreateSchema,

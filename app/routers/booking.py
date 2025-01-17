@@ -18,7 +18,8 @@ from app.schemas import (
     BookingUpdate,
     BookingCreate,
     BookingResponse,
-    AdminBookingResponse
+    AdminBookingResponse,
+    TakenBookingResponse
 )
 
 booking_router = APIRouter(prefix="/bookings", tags=["Bookings"])
@@ -50,7 +51,7 @@ async def search_bookings(
         raise HTTPException(status_code=500, detail="Internal Server Error")
     
 
-@booking_router.get("/taken")
+@booking_router.get("/taken", response_model=list[TakenBookingResponse])
 async def get_taken_bookings(
     space_id: UUID = Query(None),  # space_id is now optional
     db: Session = Depends(get_db),
