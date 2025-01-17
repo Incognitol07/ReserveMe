@@ -52,35 +52,46 @@ async def search_bookings(
 
 @booking_router.get("/taken")
 async def get_taken_bookings(
+    space_id: UUID = Query(None),  # space_id is now optional
     db: Session = Depends(get_db),
 ):
     """
     Fetch all taken bookings.
     """
     try:
-        bookings = db.query(Booking).filter(
-            Booking.end_time>=datetime.now(), 
-            Booking.status=="confirmed"
-        ).all()
+        query = db.query(Booking).filter(
+            Booking.end_time >= datetime.now(),
+            Booking.status == "confirmed"
+        )
+        
+        if space_id:
+            query = query.filter(Booking.space_id == space_id)  # Fix: Assign the filtered query back to `query`
+
+        bookings = query.all()
+        
         if not bookings:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Taken bookings not found"
             )
+        
+        # Response formatting
         return [
             {
-                "space_name": db.query(Space).filter(Space.id ==booking.space_id).first().name,
                 "start_time": booking.start_time,
                 "end_time": booking.end_time
             }
             for booking in bookings
-            ]
-    except HTTPException:
+        ]
+    except HTTPException as http_exc:
         # Re-raise HTTP exceptions as-is
-        raise
+        raise http_exc
     except Exception as e:
-        logger.error(f"Error fetching available spaces: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+        logger.error(f"Error fetching taken bookings: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error"
+        )
 
 
 @booking_router.get("/admin/all", response_model=list[AdminBookingResponse])
