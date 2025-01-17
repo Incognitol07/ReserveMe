@@ -31,6 +31,6 @@ def seed_user(db: Session):
         db.add(user)
         db.commit()
         db.refresh(user)
-        logger.info("User created with email user@example.com and password User123")
+        logger.info("User created with email user@example.com and password User1234")
     else:
         logger.info("User already exists.")
