@@ -154,6 +154,8 @@ async def login_for_oauth_form(
             status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid credentials"
         )
 
+    db_user.last_login = datetime.now()
+    db.commit()
     # Create and return the JWT access token
     access_token = create_access_token(data={"sub": db_user.username})
     return {
