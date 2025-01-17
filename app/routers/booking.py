@@ -69,6 +69,7 @@ async def get_taken_bookings(
             )
         return [
             {
+                "space_name": db.query(Space).filter(Space.id ==booking.space_id).first().name,
                 "start_time": booking.start_time,
                 "end_time": booking.end_time
             }
