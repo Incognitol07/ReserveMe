@@ -138,7 +138,7 @@ async def get_all_bookings(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
-@booking_router.post("/", response_model=BookingResponse, status_code=status.HTTP_201_CREATED)
+@booking_router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_booking(
     booking: BookingCreate,
     current_user: User = Depends(get_current_user),
@@ -160,9 +160,12 @@ async def create_booking(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Booking conflict: Existing booking from {check_booking.start_time} to {check_booking.end_time}"
             )
-
+        
+        rate = db.query(Space).filter(Space.id == booking.space_id).first().hourly_rate
+        total_cost=(booking.end_time-booking.start_time).seconds//3600 * rate
+        
         # Create the booking
-        new_booking = Booking(**booking.model_dump(), user_id=current_user.id)
+        new_booking = Booking(**booking.model_dump(), user_id = current_user.id, total_cost = total_cost)
         db.add(new_booking)
         db.commit()
         db.refresh(new_booking)

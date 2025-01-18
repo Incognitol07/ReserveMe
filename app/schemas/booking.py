@@ -10,14 +10,12 @@ class BookingCreate(BaseModel):
     start_time: datetime
     end_time: datetime
     purpose: str = Field(..., max_length=500, description="Purpose of the booking")
-    total_cost: float 
 
 class BookingUpdate(BaseModel):
     start_time: Optional[datetime]
     end_time: Optional[datetime] 
     purpose: Optional[str]
     status: Optional[str] 
-    total_cost: Optional[float]
 
 class BookingResponse(BaseModel):
     id: UUID
