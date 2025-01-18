@@ -29,15 +29,8 @@ class BookingResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class AdminBookingResponse(BaseModel):
-    id: UUID
+class AdminBookingResponse(BookingResponse):
     user_id: UUID
-    space_id: UUID
-    start_time: datetime
-    end_time: datetime
-    purpose: str
-    status: str
-    total_cost: float
 
     class Config:
         from_attributes = True
