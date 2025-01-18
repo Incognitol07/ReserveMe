@@ -163,7 +163,7 @@ async def create_booking(
         
         rate = db.query(Space).filter(Space.id == booking.space_id).first().hourly_rate
         total_cost=(booking.end_time-booking.start_time).seconds//3600 * rate
-        
+
         # Create the booking
         new_booking = Booking(**booking.model_dump(), user_id = current_user.id, total_cost = total_cost)
         db.add(new_booking)
@@ -265,13 +265,7 @@ async def update_booking_status(
     """
     Update the status of a booking.
     """
-    if not current_user.is_admin:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can update booking status."
-        )
-
-    booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == current_user.id).first()
     if not booking:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
 
