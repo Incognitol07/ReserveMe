@@ -92,9 +92,23 @@ def update_profile(
     Update the user's profile information.
     """
     try:
-        if payload.username:
+        if payload.username and payload.username != user.username:
+            db_user = db.query(User).filter(User.username == payload.username).first()
+            if db_user:
+                logger.warning(f"Attempt to register with an existing username: {db_user.username}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Username already registered"
+                    )
             user.username = payload.username
-        if payload.email:
+        if payload.email and payload.email != user.email:
+            db_user = db.query(User).filter(User.email == payload.email).first()
+            if db_user:
+                logger.warning(f"Attempt to register with an existing email: {db_user.email}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already registered",
+                )
             user.email = payload.email
 
         db.commit()

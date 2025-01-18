@@ -261,7 +261,6 @@ async def update_booking_status(
 ):
     """
     Update the status of a booking.
-    Only accessible to admins.
     """
     if not current_user.is_admin:
         raise HTTPException(

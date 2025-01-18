@@ -121,6 +121,7 @@ async def user_login(user: UserLogin, db: Session = Depends(get_db)):
         "token_type": "bearer",
         "user_id": db_user.id,
         "username": db_user.username,
+        "role": "admin" if db_user.is_admin else "user"
     }
 
 
