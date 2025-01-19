@@ -3,9 +3,7 @@
 from pydantic import BaseModel
 
 class PaymentRequest(BaseModel):
-    email: str
-    amount: int  # Amount in kobo
-    callback_url: str
+    amount: int
 
 
 class PaymentResponse(BaseModel):

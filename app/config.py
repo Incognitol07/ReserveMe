@@ -14,6 +14,8 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str = os.getenv("DATABASE_URL")
 
+    PAYMENT_CALLBACK_URL: str = os.getenv("PAYMENT_CALLBACK_URL")
+
     # JWT and authentication settings
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY")
 
