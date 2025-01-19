@@ -21,7 +21,8 @@ from app.schemas import (
     SpaceResponse,
     SpaceCreateSchema,
     SpaceUpdateSchema,
-    DetailResponse
+    DetailResponse,
+    SpaceImageResponse
 )
 
 space_router = APIRouter(prefix="/spaces")
@@ -84,7 +85,7 @@ async def create_space(
             detail="Error creating space",
         )
 
-@space_router.post("/{space_id}/upload-image", dependencies=[Depends(admin_required)])
+@space_router.post("/{space_id}/upload-image", dependencies=[Depends(admin_required)], response_model=SpaceImageResponse)
 async def upload_space_image(
     space_id: UUID, 
     file: UploadFile, 
