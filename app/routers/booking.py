@@ -25,6 +25,8 @@ from app.schemas import (
 
 booking_router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
+
+
 @booking_router.get("/search", response_model=list[BookingResponse])
 async def search_bookings(
     query: str = Query(..., description="Search term for bookings (e.g., purpose or space name)"),
@@ -51,43 +53,6 @@ async def search_bookings(
         logger.error(f"Error searching bookings: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
     
-
-@booking_router.get("/taken", response_model=list[TakenBookingResponse])
-async def get_taken_bookings(
-    space_id: UUID = Query(None),  # space_id is now optional
-    db: Session = Depends(get_db),
-):
-    """
-    Fetch all taken bookings.
-    """
-    try:
-        query = db.query(Booking).filter(
-            Booking.end_time >= datetime.now(),
-            Booking.status == "confirmed"
-        )
-        
-        if space_id:
-            query = query.filter(Booking.space_id == space_id)
-
-        bookings = query.all()
-        
-        # Response formatting
-        return [
-            {
-                "start_time": booking.start_time,
-                "end_time": booking.end_time
-            }
-            for booking in bookings
-        ]
-    except HTTPException as http_exc:
-        # Re-raise HTTP exceptions as-is
-        raise http_exc
-    except Exception as e:
-        logger.error(f"Error fetching taken bookings: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error"
-        )
 
 
 @booking_router.get("/admin/all", response_model=list[AdminBookingResponse])
@@ -272,3 +237,37 @@ async def update_booking_status(
         db.rollback()
         logger.error(f"Error updating booking status: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+
+@booking_router.get("/taken/{space_id}", response_model=list[TakenBookingResponse])
+async def get_taken_bookings(
+    space_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch all taken bookings.
+    """
+    try:
+        query = db.query(Booking).filter(
+            Booking.end_time >= datetime.now(),
+            Booking.status == "confirmed",
+            Booking.space_id == space_id
+        )
+        bookings = query.all()
+        
+        # Response formatting
+        return [
+            {
+                "start_time": booking.start_time,
+                "end_time": booking.end_time
+            }
+            for booking in bookings
+        ]
+    except HTTPException as http_exc:
+        # Re-raise HTTP exceptions as-is
+        raise http_exc
+    except Exception as e:
+        logger.error(f"Error fetching taken bookings: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error"
+        )
