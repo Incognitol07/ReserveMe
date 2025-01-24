@@ -67,15 +67,9 @@ async def get_taken_bookings(
         )
         
         if space_id:
-            query = query.filter(Booking.space_id == space_id)  # Fix: Assign the filtered query back to `query`
+            query = query.filter(Booking.space_id == space_id)
 
         bookings = query.all()
-        
-        if not bookings:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Taken bookings not found"
-            )
         
         # Response formatting
         return [
