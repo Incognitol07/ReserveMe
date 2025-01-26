@@ -10,8 +10,7 @@ from app.routers import (
     auth_router, 
     space_router, 
     booking_router,
-    profile_router,
-    payment_router
+    profile_router
 )
 from app.utils import cloudinary  # This ensures the config is set
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -73,7 +72,6 @@ app.include_router(auth_router, tags=["Authentication"])
 app.include_router(profile_router, tags=["Profile"])
 app.include_router(space_router, tags=["Spaces"])
 app.include_router(booking_router, tags=["Bookings"])
-app.include_router(payment_router, tags=["Payments"])
 
 
 # Middleware to log route endpoints with client IP

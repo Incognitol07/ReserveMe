@@ -25,8 +25,3 @@ from .profile import (
     UpdatePasswordRequest,
     UpdateProfileRequest
 )
-from .payment import (
-    PaymentRequest,
-    PaymentResponse,
-    PaymentVerificationRequest
-)
