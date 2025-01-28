@@ -49,7 +49,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.APP_NAME,
-    description="The ReserveMe API simplifies the process of booking and managing spaces, such as meeting rooms, event halls, or workspaces.",
+    description=settings.APP_DESCRIPTION,
     version="1.0.0",
     debug=settings.DEBUG,  # Enable debug mode if in development
     lifespan=lifespan,

@@ -1,18 +1,13 @@
 # app/routers/booking.py
 
-from fastapi import (
-    HTTPException,
-    Query,
-    APIRouter,
-    status,
-    Depends
-)
+from fastapi import HTTPException, Query, APIRouter, status, Depends
 from uuid import UUID
 from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from app.models import Booking, Space, User
-from app.utils import logger, get_current_user, admin_required
+from app.utils import logger, get_current_user, admin_required, create_random_key
+from app.config import settings
 from app.database import get_db
 from app.schemas import (
     BookingUpdate,
@@ -20,17 +15,20 @@ from app.schemas import (
     BookingResponse,
     AdminBookingResponse,
     TakenBookingResponse,
-    DetailResponse
+    DetailResponse,
+    PaymentResponse,
+    ConfirmPayment
 )
 
 booking_router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
 
-
 @booking_router.get("/search", response_model=list[BookingResponse])
 async def search_bookings(
-    query: str = Query(..., description="Search term for bookings (e.g., purpose or space name)"),
-    current_user: User =Depends(get_current_user),
+    query: str = Query(
+        ..., description="Search term for bookings (e.g., purpose or space name)"
+    ),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -42,8 +40,7 @@ async def search_bookings(
             db.query(Booking)
             .join(Space, Booking.space_id == Space.id)
             .filter(
-                (Booking.purpose.ilike(f"%{query}%")) |
-                (Space.name.ilike(f"%{query}%"))
+                (Booking.purpose.ilike(f"%{query}%")) | (Space.name.ilike(f"%{query}%"))
             )
             .filter(Booking.user_id == current_user.id)
             .all()
@@ -51,15 +48,19 @@ async def search_bookings(
         return bookings
     except Exception as e:
         logger.error(f"Error searching bookings: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
-    
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
 
 
 @booking_router.get("/admin/all", response_model=list[AdminBookingResponse])
 async def admin_get_all_bookings(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
-    current_user: User =Depends(admin_required),
+    limit: int = Query(
+        10, ge=1, le=100, description="Maximum number of records to return"
+    ),
+    current_user: User = Depends(admin_required),
     db: Session = Depends(get_db),
 ):
     """
@@ -70,13 +71,19 @@ async def admin_get_all_bookings(
         return bookings
     except Exception as e:
         logger.error(f"Error fetching bookings for admin: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+
 
 @booking_router.get("/", response_model=list[BookingResponse])
 async def get_all_bookings(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
-    current_user: User =Depends(get_current_user),
+    limit: int = Query(
+        10, ge=1, le=100, description="Maximum number of records to return"
+    ),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -94,10 +101,15 @@ async def get_all_bookings(
         return bookings
     except Exception as e:
         logger.error(f"Error fetching bookings: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
 
 
-@booking_router.post("/", status_code=status.HTTP_201_CREATED)
+@booking_router.post(
+    "/", status_code=status.HTTP_201_CREATED, response_model=BookingResponse
+)
 async def create_booking(
     booking: BookingCreate,
     current_user: User = Depends(get_current_user),
@@ -109,37 +121,45 @@ async def create_booking(
     """
     try:
         # Check for booking conflicts
-        check_booking = db.query(Booking).filter(
-            (Booking.start_time < booking.end_time) & 
-            (Booking.end_time > booking.start_time)
-        ).first()
-        
+        check_booking = (
+            db.query(Booking)
+            .filter(
+                (Booking.start_time < booking.end_time)
+                & (Booking.end_time > booking.start_time)
+            )
+            .first()
+        )
+
         if check_booking:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Booking conflict: Existing booking from {check_booking.start_time} to {check_booking.end_time}"
+                detail=f"Booking conflict: Existing booking from {check_booking.start_time} to {check_booking.end_time}",
             )
-        
+
         rate = db.query(Space).filter(Space.id == booking.space_id).first().hourly_rate
-        total_cost=(booking.end_time-booking.start_time).seconds//3600 * rate
+        total_cost = (booking.end_time - booking.start_time).seconds // 3600 * rate
 
         # Create the booking
-        new_booking = Booking(**booking.model_dump(), user_id = current_user.id, total_cost = total_cost)
+        new_booking = Booking(
+            **booking.model_dump(), user_id=current_user.id, total_cost=total_cost
+        )
         db.add(new_booking)
         db.commit()
         db.refresh(new_booking)
         return new_booking
 
     except SQLAlchemyError as e:
-        db.rollback()
         logger.error(f"Failed to create booking for user {current_user.id}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
 
 
 @booking_router.get("/{booking_id}", response_model=BookingResponse)
 async def get_booking(
     booking_id: UUID,
-    current_user: User =Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -147,10 +167,12 @@ async def get_booking(
     Accessible only to the owner of the booking or an admin.
     """
     booking = db.query(Booking).filter(Booking.id == booking_id).first()
-    if not booking or (booking.user_id != current_user.id and not current_user.is_admin):
+    if not booking or (
+        booking.user_id != current_user.id and not current_user.is_admin
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to access this booking."
+            detail="You do not have permission to access this booking.",
         )
     return booking
 
@@ -159,7 +181,7 @@ async def get_booking(
 async def update_booking(
     booking_id: UUID,
     update_data: BookingUpdate,
-    current_user: User =Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -170,9 +192,9 @@ async def update_booking(
     if not booking or booking.user_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to update this booking."
+            detail="You do not have permission to update this booking.",
         )
-    
+
     for key, value in update_data.model_dump(exclude_unset=True).items():
         setattr(booking, key, value)
 
@@ -181,15 +203,17 @@ async def update_booking(
         db.refresh(booking)
         return booking
     except SQLAlchemyError as e:
-        db.rollback()
         logger.error(f"Error updating booking {booking_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
 
 
 @booking_router.delete("/{booking_id}", response_model=DetailResponse)
 async def delete_booking(
     booking_id: UUID,
-    current_user: User =Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -197,10 +221,12 @@ async def delete_booking(
     Accessible only to the owner of the booking or an admin.
     """
     booking = db.query(Booking).filter(Booking.id == booking_id).first()
-    if not booking or (booking.user_id != current_user.id and not current_user.is_admin):
+    if not booking or (
+        booking.user_id != current_user.id and not current_user.is_admin
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You do not have permission to delete this booking."
+            detail="You do not have permission to delete this booking.",
         )
 
     try:
@@ -208,25 +234,36 @@ async def delete_booking(
         db.commit()
         return {"detail": "Booking deleted successfully"}
     except SQLAlchemyError as e:
-        db.rollback()
         logger.error(f"Error deleting booking {booking_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
-
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
 
 
 @booking_router.patch("/{booking_id}/status", response_model=BookingResponse)
 async def update_booking_status(
     booking_id: UUID,
-    status_sent: str = Query(..., regex="^(pending|confirmed|canceled)$", description="New status for the booking"),
-    current_user: User =Depends(get_current_user),
+    status_sent: str = Query(
+        ...,
+        regex="^(pending|confirmed|canceled)$",
+        description="New status for the booking",
+    ),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
     Update the status of a booking.
     """
-    booking = db.query(Booking).filter(Booking.id == booking_id, Booking.user_id == current_user.id).first()
+    booking = (
+        db.query(Booking)
+        .filter(Booking.id == booking_id, Booking.user_id == current_user.id)
+        .first()
+    )
     if not booking:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found"
+        )
 
     try:
         booking.status = status_sent
@@ -234,9 +271,12 @@ async def update_booking_status(
         db.refresh(booking)
         return booking
     except SQLAlchemyError as e:
-        db.rollback()
         logger.error(f"Error updating booking status: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+
 
 @booking_router.get("/taken/{space_id}", response_model=list[TakenBookingResponse])
 async def get_taken_bookings(
@@ -250,16 +290,13 @@ async def get_taken_bookings(
         query = db.query(Booking).filter(
             Booking.end_time >= datetime.now(),
             Booking.status == "confirmed",
-            Booking.space_id == space_id
+            Booking.space_id == space_id,
         )
         bookings = query.all()
-        
+
         # Response formatting
         return [
-            {
-                "start_time": booking.start_time,
-                "end_time": booking.end_time
-            }
+            {"start_time": booking.start_time, "end_time": booking.end_time}
             for booking in bookings
         ]
     except HTTPException as http_exc:
@@ -269,5 +306,88 @@ async def get_taken_bookings(
         logger.error(f"Error fetching taken bookings: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error"
+            detail="Internal Server Error",
+        )
+
+
+@booking_router.get("/{booking_id}/payment", response_model=PaymentResponse)
+async def pay_booking(
+    booking_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Pay specified amount for a booking.
+    """
+    query = db.query(Booking).filter(
+        Booking.id == booking_id,
+        Booking.status == "pending",
+        Booking.user_id == current_user.id,
+    )
+    booking = query.first()
+
+    if not booking:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Booking with ID: {booking_id} not available for confirmation",
+        )
+    
+    if not booking.tx_ref:
+        tx_ref=create_random_key()
+        booking.tx_ref = tx_ref
+        db.commit()
+        db.refresh(booking)
+
+    return {
+        "tx_ref": booking.tx_ref,
+        "amount": booking.total_cost,
+        "currency": "NGN",
+        "redirect_url": settings.PAYMENT_CALLBACK_URL,
+        "customer": {"email": current_user.email, "name": current_user.username},
+        "customizations": {
+            "title": settings.APP_NAME,
+            "description": settings.APP_DESCRIPTION,
+        }
+    }
+
+
+@booking_router.post("/{booking_id}/confirm", response_model=DetailResponse)
+async def confirm_booking_payment(
+    booking_id: UUID,
+    confirmation: ConfirmPayment,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Fetch all taken bookings.
+    """
+    try:
+        query = db.query(Booking).filter(
+            Booking.id == booking_id,
+            Booking.status == "pending",
+            Booking.user_id == current_user.id,
+            Booking.tx_ref == confirmation.tx_ref
+        )
+        booking = query.first()
+
+        if not booking:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Booking with ID: {booking_id} and tx_ref {confirmation.tx_ref}  not available for confirmation",
+            )
+
+        booking.status = "confirmed"
+        booking.transaction_id = confirmation.transaction_id
+        db.commit()
+        db.refresh(booking)
+
+        return booking
+    except HTTPException as http_exc:
+        # Re-raise HTTP exceptions as-is
+        raise http_exc
+    except Exception as e:
+        logger.error(f"Error confirming booking (ID: {booking_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
         )

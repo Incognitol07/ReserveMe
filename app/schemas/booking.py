@@ -1,6 +1,6 @@
 # app/schemas/booking.py
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from datetime import datetime
 from typing import Optional
 from uuid import UUID
@@ -10,6 +10,14 @@ class BookingCreate(BaseModel):
     start_time: datetime
     end_time: datetime
     purpose: str = Field(..., max_length=500, description="Purpose of the booking")
+
+    @field_validator("end_time")
+    @classmethod
+    def check_range(cls, end_time, start_time):
+        start_time = start_time.data["start_time"]
+        if start_time>=end_time:
+            raise ValueError("End time must be greater than start time")
+        return end_time
 
 class BookingUpdate(BaseModel):
     start_time: Optional[datetime]
@@ -41,3 +49,23 @@ class TakenBookingResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class Customization(BaseModel):
+    title: str
+    description: str
+
+class Customer(BaseModel):
+    email: EmailStr
+    name: str
+
+class PaymentResponse(BaseModel):
+    tx_ref: str
+    amount: float
+    currency: str
+    redirect_url: str
+    customer: Customer
+    customizations: Customization
+
+class ConfirmPayment(BaseModel):
+    tx_ref: str
+    transaction_id: str

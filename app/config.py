@@ -8,7 +8,8 @@ load_dotenv()
 
 class Settings(BaseSettings):
     # Application settings
-    APP_NAME: str = "ReserveMe API"
+    APP_NAME: str
+    APP_DESCRIPTION: str= "ReserveMe simplifies the process of booking and managing spaces, such as meeting rooms, event halls, or workspaces."
     ENVIRONMENT: str = os.getenv("ENVIRONMENT")
     DEBUG: bool = ENVIRONMENT == "development"
 
@@ -21,6 +22,8 @@ class Settings(BaseSettings):
     CLOUDINARY_CLOUD: str 
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str    
+
+    PAYMENT_CALLBACK_URL: str
 
     # Other security settings
     ALLOWED_HOSTS: list = ["*"]

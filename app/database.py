@@ -1,6 +1,7 @@
 # app/database.py
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker, declarative_base
 from app.config import settings
 
@@ -20,5 +21,7 @@ def get_db():
     db = SessionLocal()  # Create a new database session
     try:
         yield db  # Return the session to the calling function
+    except SQLAlchemyError:
+        db.rollback()
     finally:
         db.close()  # Ensure the session is closed after usage

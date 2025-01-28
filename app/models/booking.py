@@ -13,8 +13,10 @@ class Booking(Base):
     space_id = Column(UUID(as_uuid=True), ForeignKey("spaces.id"), nullable=False)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
-    status = Column(String, default="confirmed", nullable=False)  # Options: pending, confirmed, canceled
+    status = Column(String, default="pending", nullable=False)  # Options: pending, confirmed, canceled
     total_cost = Column(Float, nullable=False)
     purpose = Column(Text, nullable=False)
+    tx_ref = Column(String, nullable=True)
+    transaction_id = Column(String, nullable=True)
     user = relationship("User", back_populates="bookings")
     space = relationship("Space", back_populates="bookings")
