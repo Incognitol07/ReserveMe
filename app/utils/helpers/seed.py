@@ -1,10 +1,11 @@
 # app/utils/helpers/admin.py
 
-from sqlalchemy.orm import Session
 from app.models import User
 from app.utils import hash_password, logger
+from app.database import get_db
 
-def seed_admin(db: Session):
+def seed_admin():
+    db = next(get_db())
     admin = db.query(User).filter(User.email == "admin@example.com").first()
     if not admin:
         admin = User(
@@ -21,7 +22,8 @@ def seed_admin(db: Session):
     else:
         logger.info("Admin user already exists.")
 
-def seed_user(db: Session):
+def seed_user():
+    db = next(get_db())
     user = db.query(User).filter(User.email == "user@example.com").first()
     if not user:
         user = User(

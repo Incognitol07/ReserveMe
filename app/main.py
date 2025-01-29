@@ -2,6 +2,7 @@
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from app.database import engine, Base, get_db
 from app.config import settings
@@ -12,9 +13,8 @@ from app.routers import (
     booking_router,
     profile_router
 )
-from app.models import User
+from app.background_tasks import scheduler, start_scheduler
 from app.utils import cloudinary  # This ensures the config is set
-from starlette.middleware.base import BaseHTTPMiddleware
 import time
 
 
@@ -34,18 +34,14 @@ async def lifespan(app: FastAPI):
     """Manage application lifespan events."""
     logger.info("Starting up the application...")
     Base.metadata.create_all(bind=engine)  # Initialize database (create tables if they don't exist)
-    # Seed the admin user
-    db = next(get_db())  # Get a database session
-    try:
-        seed_admin(db)  # Call the function to seed admin
-        seed_user(db)  # Call the function to seed user
-    except Exception as e:
-        logger.error(f"Error seeding admin user: {e}")
-    finally:
-        db.close()  # Close the session
+    start_scheduler()
+    # Seed the users
+    seed_admin()  # Call the function to seed admin
+    seed_user()  # Call the function to seed user
     try:
         yield
     finally:
+        scheduler.shutdown()
         logger.info("Shutting down the application...")
 
 app = FastAPI(
