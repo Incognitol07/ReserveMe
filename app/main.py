@@ -15,7 +15,6 @@ from app.routers import (
 from app.models import User
 from app.utils import cloudinary  # This ensures the config is set
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette_admin.contrib.sqla import Admin, ModelView
 import time
 
 
@@ -77,12 +76,6 @@ app.include_router(booking_router, tags=["Bookings"])
 
 
 admin = Admin(engine, title="Example: SQLAlchemy")
-
-# Add view
-admin.add_view(ModelView(User))
-
-# Mount admin to your app
-admin.mount_to(app)
 
 
 # Middleware to log route endpoints with client IP
