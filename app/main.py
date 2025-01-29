@@ -74,10 +74,6 @@ app.include_router(profile_router, tags=["Profile"])
 app.include_router(space_router, tags=["Spaces"])
 app.include_router(booking_router, tags=["Bookings"])
 
-
-admin = Admin(engine, title="Example: SQLAlchemy")
-
-
 # Middleware to log route endpoints with client IP
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
