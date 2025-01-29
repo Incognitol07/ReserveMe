@@ -17,6 +17,6 @@ class Booking(Base):
     total_cost = Column(Float, nullable=False)
     purpose = Column(Text, nullable=False)
     tx_ref = Column(String, nullable=True)
-    transaction_id = Column(String, nullable=True)
+    transaction_id = Column(Integer, nullable=True)
     user = relationship("User", back_populates="bookings")
     space = relationship("Space", back_populates="bookings")

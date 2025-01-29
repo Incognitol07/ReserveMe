@@ -362,6 +362,7 @@ async def confirm_booking_payment(
     Fetch all taken bookings.
     """
     try:
+        # Fetch and validate the booking
         query = db.query(Booking).filter(
             Booking.id == booking_id,
             Booking.status == "pending",
@@ -373,17 +374,35 @@ async def confirm_booking_payment(
         if not booking:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Booking with ID: {booking_id} and tx_ref {confirmation.tx_ref}  not available for confirmation",
+                detail=f"Booking with ID: {booking_id} and tx_ref {confirmation.tx_ref} not available for confirmation",
             )
 
+        # Check for duplicate transactions
+        existing_transaction = db.query(Booking).filter(
+            Booking.transaction_id == confirmation.transaction_id
+        ).first()
+        if existing_transaction:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Transaction ID already used",
+            )
+
+        # Update the booking status
         booking.status = "confirmed"
         booking.transaction_id = confirmation.transaction_id
         db.commit()
         db.refresh(booking)
 
-        return booking
+        logger.info(f"Booking (ID: {booking_id}) confirmed with transaction ID: {confirmation.transaction_id}")
+
+        return {
+            "message": "Booking confirmed successfully",
+            "booking_id": booking.id,
+            "status": booking.status,
+            "transaction_id": booking.transaction_id,
+        }
+
     except HTTPException as http_exc:
-        # Re-raise HTTP exceptions as-is
         raise http_exc
     except Exception as e:
         logger.error(f"Error confirming booking (ID: {booking_id}): {e}")

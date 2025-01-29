@@ -68,4 +68,4 @@ class PaymentResponse(BaseModel):
 
 class ConfirmPayment(BaseModel):
     tx_ref: str
-    transaction_id: str
+    transaction_id: int
