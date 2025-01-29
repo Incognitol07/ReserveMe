@@ -426,7 +426,7 @@ async def confirm_booking_payment(
             detail="Internal Server Error",
         )
 
-@booking_router.get("/bookings/{booking_id}/receipt", response_model=ReceiptResponse)
+@booking_router.get("/{booking_id}/receipt", response_model=ReceiptResponse)
 async def get_booking_receipt(
     booking_id: UUID,
     db: Session = Depends(get_db),
