@@ -351,7 +351,7 @@ async def pay_booking(
     }
 
 
-@booking_router.post("/{booking_id}/confirm", response_model=DetailResponse)
+@booking_router.post("/{booking_id}/confirm", response_model=BookingResponse)
 async def confirm_booking_payment(
     booking_id: UUID,
     confirmation: ConfirmPayment,
