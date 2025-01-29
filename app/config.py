@@ -23,8 +23,6 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str    
 
-    PAYMENT_CALLBACK_URL: str
-
     # Other security settings
     ALLOWED_HOSTS: list = ["*"]
     CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:5173"]  # Add frontend URL if applicable

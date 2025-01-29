@@ -10,3 +10,4 @@ class UpdatePasswordRequest(BaseModel):
 class UpdateProfileRequest(BaseModel):
     username: Optional[str]
     email: Optional[EmailStr]
+    phone_number: Optional[str]

@@ -6,7 +6,13 @@ from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from app.models import Booking, Space, User
-from app.utils import logger, get_current_user, admin_required, create_random_key
+from app.utils import (
+    logger, 
+    get_current_user, 
+    admin_required, 
+    create_random_key, 
+    generate_and_store_receipt_id
+    )
 from app.config import settings
 from app.database import get_db
 from app.schemas import (
@@ -17,7 +23,9 @@ from app.schemas import (
     TakenBookingResponse,
     DetailResponse,
     PaymentResponse,
-    ConfirmPayment
+    ConfirmPayment,
+    BookingConfirmationResponse,
+    ReceiptResponse
 )
 
 booking_router = APIRouter(prefix="/bookings", tags=["Bookings"])
@@ -342,16 +350,18 @@ async def pay_booking(
         "tx_ref": booking.tx_ref,
         "amount": booking.total_cost,
         "currency": "NGN",
-        "redirect_url": settings.PAYMENT_CALLBACK_URL,
-        "customer": {"email": current_user.email, "name": current_user.username},
+        "customer": {
+            "email": current_user.email, 
+            "name": current_user.username,
+            "phonenumber": current_user.phone_number
+            },
         "customizations": {
             "title": settings.APP_NAME,
             "description": settings.APP_DESCRIPTION,
         }
     }
 
-
-@booking_router.post("/{booking_id}/confirm", response_model=BookingResponse)
+@booking_router.post("/{booking_id}/confirm", response_model=BookingConfirmationResponse)
 async def confirm_booking_payment(
     booking_id: UUID,
     confirmation: ConfirmPayment,
@@ -359,7 +369,7 @@ async def confirm_booking_payment(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Fetch all taken bookings.
+    Confirm a booking payment and generate a receipt ID.
     """
     try:
         # Fetch and validate the booking
@@ -390,6 +400,10 @@ async def confirm_booking_payment(
         # Update the booking status
         booking.status = "confirmed"
         booking.transaction_id = confirmation.transaction_id
+
+        # Generate and store the receipt ID
+        generate_and_store_receipt_id(db, booking)
+
         db.commit()
         db.refresh(booking)
 
@@ -400,12 +414,82 @@ async def confirm_booking_payment(
             "booking_id": booking.id,
             "status": booking.status,
             "transaction_id": booking.transaction_id,
+            "receipt_id": booking.receipt_id,  # Include the receipt ID in the response
         }
 
     except HTTPException as http_exc:
         raise http_exc
     except Exception as e:
         logger.error(f"Error confirming booking (ID: {booking_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+
+@booking_router.get("/bookings/{booking_id}/receipt", response_model=ReceiptResponse)
+async def get_booking_receipt(
+    booking_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Fetch booking details for the receipt page.
+    """
+    try:
+        # Fetch the booking with user and space details
+        booking = db.query(Booking).filter(
+            Booking.id == booking_id,
+            Booking.user_id == current_user.id,  # Ensure the booking belongs to the user
+        ).join(User).join(Space).first()
+
+        if not booking:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Booking with ID: {booking_id} not found",
+            )
+
+        # Calculate duration
+        duration = booking.end_time - booking.start_time
+        duration_hours = duration.total_seconds() / 3600
+
+        # Format the response
+        response = {
+            "receipt_no": booking.receipt_id,
+            "company_name": "ReserveMe.com",
+            "user": {
+                "name": booking.user.username,
+                "email": booking.user.email,
+                "phone_number": booking.user.phone_number,
+            },
+            "space": {
+                "name": booking.space.name,
+                "location": booking.space.location,  # Assuming Space has an 'location' field
+            },
+            "booking": {
+                "date": booking.start_time.strftime("%B %d, %Y"),  # Format: January 15, 2024
+                "time": f"{booking.start_time.strftime('%I:%M %p')} - {booking.end_time.strftime('%I:%M %p')}",  # Format: 10:00 AM - 12:00 PM
+                "duration": f"{duration_hours} hours",  # Format: 2 hours
+                "purpose": booking.purpose,
+            },
+            "payment": {
+                "amount": booking.total_cost,
+                "status": booking.status,
+                "transaction_id": booking.transaction_id,
+                "payment_date": booking.created_at.strftime("%B %d, %Y %I:%M %p"),  # Format: January 15, 2024 10:05 AM
+            },
+            "footer": {
+                "thank_you_message": "Thank you for booking with ReserveMe!",
+                "support_email": "support@reserveme.com",
+                "terms_and_conditions": "https://reserveme.com/terms",
+            }
+        }
+
+        return response
+
+    except HTTPException as http_exc:
+        raise http_exc
+    except Exception as e:
+        logger.error(f"Error fetching receipt for booking (ID: {booking_id}): {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error",

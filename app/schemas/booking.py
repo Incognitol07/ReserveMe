@@ -33,6 +33,7 @@ class BookingResponse(BaseModel):
     purpose: str
     status: str
     total_cost: float
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -57,15 +58,56 @@ class Customization(BaseModel):
 class Customer(BaseModel):
     email: EmailStr
     name: str
+    phonenumber: str
 
 class PaymentResponse(BaseModel):
     tx_ref: str
     amount: float
     currency: str
-    redirect_url: str
     customer: Customer
     customizations: Customization
 
 class ConfirmPayment(BaseModel):
     tx_ref: str
     transaction_id: int
+
+class BookingConfirmationResponse(BaseModel):
+    message: str
+    booking_id: UUID
+    status: str
+    transaction_id: int
+
+class UserDetail(BaseModel):
+    name: str
+    email: EmailStr
+    phone_number: str
+
+class SpaceDetail(BaseModel):
+    name: str
+    location: str
+
+class BookingDetail(BaseModel):
+    date: str
+    time: str
+    duration: str
+    purpose: str
+
+class PaymentDetail(BaseModel):
+    amount: float
+    status: str
+    transaction_id: int
+    payment_date: str
+
+class Footer(BaseModel):
+    thank_you_message: str
+    support_email: str
+    terms_and_conditions: str
+
+class ReceiptResponse(BaseModel):
+    receipt_no: str
+    company_name: str
+    user: UserDetail
+    space: SpaceDetail
+    booking: BookingDetail
+    payment: PaymentDetail
+    footer: Footer

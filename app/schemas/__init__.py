@@ -15,7 +15,9 @@ from .booking import (
     AdminBookingResponse,
     TakenBookingResponse,
     PaymentResponse,
-    ConfirmPayment
+    ConfirmPayment,
+    BookingConfirmationResponse,
+    ReceiptResponse
 )
 from .space import (
     SpaceCreateSchema,

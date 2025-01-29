@@ -13,6 +13,7 @@ class User(Base):
     username = Column(String, unique=True, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
     password = Column(String, nullable=False)  # Store securely hashed passwords
+    phone_number = Column(String, nullable=False)
     is_admin = Column(Boolean, default=False)
     joined_at = Column(DateTime, default=datetime.now)
     last_login = Column(DateTime, nullable=True)  # Track login activity

@@ -11,6 +11,7 @@ def seed_admin(db: Session):
             username="admin",
             email="admin@example.com",
             password=hash_password("Admin123"),
+            phone_number = "0123456789",
             is_admin=True,
         )
         db.add(admin)
@@ -26,7 +27,8 @@ def seed_user(db: Session):
         user = User(
             username="user",
             email="user@example.com",
-            password=hash_password("User1234")
+            password=hash_password("User1234"),
+            phone_number = "10123456789"
         )
         db.add(user)
         db.commit()
