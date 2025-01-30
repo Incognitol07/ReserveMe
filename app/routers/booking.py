@@ -62,27 +62,6 @@ async def search_bookings(
         )
 
 
-@booking_router.get("/admin/all", response_model=list[AdminBookingResponse])
-async def admin_get_all_bookings(
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(
-        10, ge=1, le=100, description="Maximum number of records to return"
-    ),
-    current_user: User = Depends(admin_required),
-    db: Session = Depends(get_db),
-):
-    """
-    Fetch all bookings for admin review with pagination.
-    """
-    try:
-        bookings = db.query(Booking).offset(skip).limit(limit).all()
-        return bookings
-    except Exception as e:
-        logger.error(f"Error fetching bookings for admin: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal Server Error",
-        )
 
 
 @booking_router.get("/", response_model=list[BookingResponse])
@@ -490,6 +469,54 @@ async def get_booking_receipt(
         raise http_exc
     except Exception as e:
         logger.error(f"Error fetching receipt for booking (ID: {booking_id}): {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Internal Server Error",
+        )
+
+@booking_router.get("/admin/all", response_model=list[AdminBookingResponse])
+async def admin_get_all_bookings(
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
+    current_user: User = Depends(admin_required),
+    db: Session = Depends(get_db),
+):
+    """
+    Fetch all bookings for admin review with pagination, including user and space details.
+    """
+    try:
+        bookings = (
+            db.query(Booking)
+            .join(User, Booking.user_id == User.id)
+            .join(Space, Booking.space_id == Space.id)
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+        
+        # Map the results to the AdminBookingResponse schema
+        return  [
+            AdminBookingResponse(
+                id=booking.id,
+                receipt_id=booking.receipt_id,
+                user_id=booking.user_id,
+                username=booking.user.username,
+                space_id=booking.space_id,
+                space_name=booking.space.name,
+                start_time=booking.start_time,
+                end_time=booking.end_time,
+                status=booking.status,
+                total_cost=booking.total_cost,
+                purpose=booking.purpose,
+                tx_ref=booking.tx_ref,
+                transaction_id=booking.transaction_id,
+                created_at=booking.created_at,
+            )
+            for booking in bookings
+        ]
+        
+    except Exception as e:
+        logger.error(f"Error fetching bookings for admin: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal Server Error",

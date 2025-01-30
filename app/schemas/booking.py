@@ -40,6 +40,11 @@ class BookingResponse(BaseModel):
 
 class AdminBookingResponse(BookingResponse):
     user_id: UUID
+    username: str
+    space_name: str
+    receipt_id: Optional[str] = None  # Optional field
+    tx_ref: Optional[str] = None  # Optional field
+    transaction_id: Optional[int] = None  # Optional field
 
     class Config:
         from_attributes = True
