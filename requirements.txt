@@ -8,3 +8,4 @@ psycopg2-binary
 uvicorn[standard]~=0.23
 requests
 cloudinary
+apscheduler
