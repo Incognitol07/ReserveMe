@@ -18,11 +18,6 @@ class Settings(BaseSettings):
     # JWT and authentication settings
     JWT_SECRET_KEY: str
 
-    # Cloudinary
-    CLOUDINARY_CLOUD: str 
-    CLOUDINARY_API_KEY: str
-    CLOUDINARY_API_SECRET: str    
-
     # Other security settings
     ALLOWED_HOSTS: list = ["*"]
     CORS_ORIGINS: list = ["http://localhost:3000", "http://localhost:5173"]  # Add frontend URL if applicable

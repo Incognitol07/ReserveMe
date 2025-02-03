@@ -14,7 +14,6 @@ from app.routers import (
     profile_router
 )
 from app.background_tasks import scheduler, start_scheduler
-from app.utils import cloudinary  # This ensures the config is set
 import time
 
 

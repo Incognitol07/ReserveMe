@@ -37,7 +37,3 @@ class SpaceUpdateSchema(BaseModel):
     location: Optional[str] = Field(None, max_length=255, description="Updated location of the space")
     amenities: Optional[list[str]] = Field(None, max_length=500, description="Updated list of amenities provided")
     hourly_rate: Optional[float] = Field(None, gt=0, description="Updated hourly rental rate for the space")
-
-class SpaceImageResponse(BaseModel):
-    message: str
-    image_url: str

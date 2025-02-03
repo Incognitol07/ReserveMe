@@ -22,8 +22,7 @@ from .booking import (
 from .space import (
     SpaceCreateSchema,
     SpaceResponse, 
-    SpaceUpdateSchema,
-    SpaceImageResponse
+    SpaceUpdateSchema
 )
 from .profile import (
     UpdatePasswordRequest,
