@@ -64,7 +64,7 @@ async def search_bookings(
 
 
 
-@booking_router.get("/", response_model=list[BookingResponse])
+@booking_router.get("/", response_model=list[AdminBookingResponse])
 async def get_all_bookings(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(
@@ -80,12 +80,32 @@ async def get_all_bookings(
     try:
         bookings = (
             db.query(Booking)
+            .join(Space, Booking.space_id == Space.id)
+            .join(User, Booking.user_id == User.id)
             .filter(Booking.user_id == current_user.id)
             .offset(skip)
             .limit(limit)
             .all()
         )
-        return bookings
+        return  [
+            AdminBookingResponse(
+                id=booking.id,
+                receipt_id=booking.receipt_id,
+                user_id=booking.user_id,
+                username=booking.user.username,
+                space_id=booking.space_id,
+                space_name=booking.space.name,
+                start_time=booking.start_time,
+                end_time=booking.end_time,
+                status=booking.status,
+                total_cost=booking.total_cost,
+                purpose=booking.purpose,
+                tx_ref=booking.tx_ref,
+                transaction_id=booking.transaction_id,
+                created_at=booking.created_at,
+            )
+            for booking in bookings
+        ]
     except Exception as e:
         logger.error(f"Error fetching bookings: {e}")
         raise HTTPException(
