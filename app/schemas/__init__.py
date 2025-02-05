@@ -17,6 +17,7 @@ from .booking import (
     ConfirmPayment,
     BookingConfirmationResponse,
     ReceiptResponse,
+    AllBookingResponse
 )
 from .space import SpaceCreateSchema, SpaceResponse, SpaceUpdateSchema
 from .profile import UpdatePasswordRequest, UpdateProfileRequest

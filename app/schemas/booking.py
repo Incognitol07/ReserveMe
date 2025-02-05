@@ -49,6 +49,22 @@ class AdminBookingResponse(BookingResponse):
     class Config:
         from_attributes = True
 
+class Pagination(BaseModel):
+    current_page:int
+    next_page: int|None
+    prev_page: int|None
+    total_pages: int
+    total_records: int
+    next_request: str|None
+    prev_request: str|None
+
+class AllBookingResponse(BaseModel):
+    data: list[AdminBookingResponse]
+    pagination: Pagination
+    class Config:
+        from_attributes = True
+
+
 class TakenBookingResponse(BaseModel):
     start_time: datetime
     end_time: datetime
