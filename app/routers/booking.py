@@ -89,6 +89,7 @@ async def get_all_bookings(
             .join(Space, Booking.space_id == Space.id)
             .join(User, Booking.user_id == User.id)
             .filter(Booking.user_id == current_user.id)
+            .order_by(Booking.created_at.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -525,8 +526,9 @@ async def get_booking_receipt(
             detail="Internal Server Error",
         )
 
-@booking_router.get("/admin/all", response_model=list[AdminBookingResponse])
+@booking_router.get("/admin/all", response_model=AllBookingResponse)
 async def admin_get_all_bookings(
+    request: Request,
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(10, ge=1, le=100, description="Maximum number of records to return"),
     current_user: User = Depends(admin_required),
@@ -536,35 +538,62 @@ async def admin_get_all_bookings(
     Fetch all bookings for admin review with pagination, including user and space details.
     """
     try:
+        total_records = db.query(Booking).count()
+        total_pages = (total_records // limit) + (1 if total_records % limit > 0 else 0)
+        current_page = (skip // limit) + 1
         bookings = (
             db.query(Booking)
             .join(User, Booking.user_id == User.id)
             .join(Space, Booking.space_id == Space.id)
+            .order_by(Booking.created_at.desc())
             .offset(skip)
             .limit(limit)
             .all()
         )
+
+        next_skip = skip + limit
+        prev_skip = max(skip - limit, 0)
+
+        base_url = str(request.url).split("?")[0]  # Get the base URL without query params
+
+        next_request = (
+            f"{base_url}?skip={next_skip}&limit={limit}" if next_skip < total_records else None
+        )
+        prev_request = (
+            f"{base_url}?skip={prev_skip}&limit={limit}" if skip > 0 else None
+        )
         
         # Map the results to the AdminBookingResponse schema
-        return  [
-            AdminBookingResponse(
-                id=booking.id,
-                receipt_id=booking.receipt_id,
-                user_id=booking.user_id,
-                username=booking.user.username,
-                space_id=booking.space_id,
-                space_name=booking.space.name,
-                start_time=booking.start_time,
-                end_time=booking.end_time,
-                status=booking.status,
-                total_cost=booking.total_cost,
-                purpose=booking.purpose,
-                tx_ref=booking.tx_ref,
-                transaction_id=booking.transaction_id,
-                created_at=booking.created_at,
-            )
-            for booking in bookings
-        ]
+        return  {
+            "data": [
+                AdminBookingResponse(
+                    id=booking.id,
+                    receipt_id=booking.receipt_id,
+                    user_id=booking.user_id,
+                    username=booking.user.username,
+                    space_id=booking.space_id,
+                    space_name=booking.space.name,
+                    start_time=booking.start_time,
+                    end_time=booking.end_time,
+                    status=booking.status,
+                    total_cost=booking.total_cost,
+                    purpose=booking.purpose,
+                    tx_ref=booking.tx_ref,
+                    transaction_id=booking.transaction_id,
+                    created_at=booking.created_at,
+                ).model_dump()
+                for booking in bookings
+            ],
+            "pagination": {
+                "current_page": current_page,
+                "next_page": current_page + 1 if next_skip < total_records else None,
+                "prev_page": current_page - 1 if skip > 0 else None,
+                "total_pages": total_pages,
+                "total_records": total_records,
+                "next_request": next_request,
+                "prev_request": prev_request,
+            },
+        }
         
     except Exception as e:
         logger.error(f"Error fetching bookings for admin: {e}")
