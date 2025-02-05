@@ -3,7 +3,6 @@
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
 from datetime import datetime
-import re
 
 
 # Base schema for user-related attributes
@@ -32,6 +31,7 @@ class UserResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class RegisterResponse(BaseModel):
     username: str
     email: EmailStr
@@ -53,7 +53,3 @@ class DetailResponse(BaseModel):
 class RefreshResponse(BaseModel):
     access_token: str
     token_type: str
-
-
-class RefreshToken(BaseModel):
-    refresh_token: str 

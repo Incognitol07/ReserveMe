@@ -10,8 +10,7 @@ from app.schemas.auth import (
     RegisterResponse,
     LoginResponse,
     DetailResponse,
-    RefreshResponse,
-    RefreshToken,
+    RefreshResponse
 )
 from app.models.user import User
 from app.utils import (
@@ -28,7 +27,7 @@ from app.database import get_db
 from app.config import settings
 
 MAX_FAILED_ATTEMPTS = 5
-LOCKOUT_DURATION = timedelta(minutes=1)
+LOCKOUT_DURATION = timedelta(minutes=5)
 
 auth_router = APIRouter(prefix="/auth")
 
