@@ -19,6 +19,6 @@ def seed_admin():
         db.add(admin)
         db.commit()
         db.refresh(admin)
-        logger.info("Admin user created with email admin@example.com and password Admin123")
+        logger.info("Admin user created")
     else:
         logger.info("Admin user already exists.")

@@ -24,6 +24,7 @@ class UserResponse(BaseModel):
     id: UUID
     username: str
     email: EmailStr
+    phone_number: str
     joined_at: datetime
     last_login: datetime | None
     is_active: bool
