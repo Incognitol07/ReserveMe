@@ -26,7 +26,7 @@ class Settings(BaseSettings):
 
     # Other security settings
     ALLOWED_HOSTS: list = ["*"]
-    CORS_ORIGINS: list = ["https://reserveme-seven.vercel.app"]  # Add frontend URL if applicable
+    CORS_ORIGINS: list = ["http://localhost:5173"] if DEBUG else ["https://reserveme-seven.vercel.app"]  # Add frontend URL if applicable
 
     class Config:
         env_file =".env"
