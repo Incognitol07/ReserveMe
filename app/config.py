@@ -15,6 +15,12 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
 
+    ADMIN_EMAIL: str
+    ADMIN_PASSWORD: str
+    ADMIN_PHONE: str
+
+    ADMIN_NAME: str
+
     # JWT and authentication settings
     JWT_SECRET_KEY: str
 

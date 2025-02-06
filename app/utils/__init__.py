@@ -12,7 +12,6 @@ from .helpers import (
     get_current_user, 
     admin_required, 
     seed_admin,
-    seed_user,
     create_random_key,
     generate_and_store_receipt_id
 )

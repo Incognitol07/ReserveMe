@@ -6,7 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from app.database import engine, Base, get_db
 from app.config import settings
-from app.utils import logger, seed_admin, seed_user
+from app.utils import logger, seed_admin
 from app.routers import (
     auth_router, 
     space_router, 
@@ -36,7 +36,6 @@ async def lifespan(app: FastAPI):
     start_scheduler()
     # Seed the users
     seed_admin()  # Call the function to seed admin
-    seed_user()  # Call the function to seed user
     try:
         yield
     finally:
