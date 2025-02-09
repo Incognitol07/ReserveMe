@@ -2,8 +2,8 @@
 
 import os
 import jwt
-from fastapi import Depends, HTTPException, status
-from datetime import datetime, timedelta
+from fastapi import HTTPException, status
+from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from pydantic import ValidationError
 
@@ -62,7 +62,7 @@ def create_access_token(data: dict) -> str:
     to_encode = (
         data.copy()
     )  # Create a copy of the data dictionary to avoid modifying the original
-    expire = datetime.now() + timedelta(
+    expire = datetime.now(timezone.utc) + timedelta(
         minutes=ACCESS_TOKEN_EXPIRE_MINUTES
     )  # Use UTC time for consistency
     to_encode.update({"token_type": "access"})
@@ -128,7 +128,7 @@ def create_refresh_token(data: dict) -> str:
         str: The generated JWT refresh token.
     """
     to_encode = data.copy()
-    expire = datetime.now() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+    expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"token_type": "refresh"})
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
