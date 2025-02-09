@@ -328,8 +328,7 @@ async def get_taken_bookings(
     try:
         query = db.query(Booking).filter(
             Booking.end_time >= datetime.now(),
-            Booking.status == "confirmed",
-            Booking.space_id == space_id,
+            Booking.space_id == space_id
         )
         bookings = query.all()
 
