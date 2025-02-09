@@ -506,11 +506,6 @@ async def get_booking_receipt(
                 "status": booking.status,
                 "transaction_id": booking.transaction_id,
                 "payment_date": booking.created_at.strftime("%B %d, %Y %I:%M %p"),  # Format: January 15, 2024 10:05 AM
-            },
-            "footer": {
-                "thank_you_message": "Thank you for booking with ReserveMe!",
-                "support_email": "support@reserveme.com",
-                "terms_and_conditions": "https://reserveme.com/terms",
             }
         }
 

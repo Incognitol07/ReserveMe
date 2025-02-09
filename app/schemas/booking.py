@@ -119,10 +119,6 @@ class PaymentDetail(BaseModel):
     transaction_id: int
     payment_date: str
 
-class Footer(BaseModel):
-    thank_you_message: str
-    support_email: str
-    terms_and_conditions: str
 
 class ReceiptResponse(BaseModel):
     receipt_no: str
@@ -131,4 +127,3 @@ class ReceiptResponse(BaseModel):
     space: SpaceDetail
     booking: BookingDetail
     payment: PaymentDetail
-    footer: Footer
