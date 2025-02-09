@@ -180,7 +180,9 @@ async def protected_route(current_user: User = Depends(get_current_user)):
 # Login route for user authentication and token generation
 @auth_router.post("/login", include_in_schema=False)
 async def login_for_oauth_form(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(), 
+    db: Session = Depends(get_db)
 ):
     db_user = db.query(User).filter(User.email == form_data.username).first()
 
@@ -193,6 +195,16 @@ async def login_for_oauth_form(
     db.commit()
     # Create and return the JWT access token
     access_token = create_access_token(data={"sub": db_user.username})
+    refresh_token = create_refresh_token(data={"sub": db_user.username})
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refresh_token,
+        httponly=True,  # Prevent JavaScript access (XSS protection)
+        secure=False if settings.DEBUG else True,    # Use HTTPS only (production best practice)
+        samesite="Strict",  # Prevent CSRF (adjust as needed)
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # Expiry in seconds
+    )
     return {
         "access_token": access_token,
         "token_type": "bearer"
