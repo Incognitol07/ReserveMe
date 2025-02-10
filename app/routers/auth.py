@@ -125,7 +125,7 @@ async def user_login(
         value=refresh_token,
         httponly=True,  # Prevent JavaScript access (XSS protection)
         secure=False if settings.DEBUG else True,    # Use HTTPS only (production best practice)
-        samesite="Strict",  # Prevent CSRF (adjust as needed)
+        samesite="None",  # Prevent CSRF (adjust as needed)
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # Expiry in seconds
     )
 
@@ -202,7 +202,7 @@ async def login_for_oauth_form(
         value=refresh_token,
         httponly=True,  # Prevent JavaScript access (XSS protection)
         secure=False if settings.DEBUG else True,    # Use HTTPS only (production best practice)
-        samesite="Strict",  # Prevent CSRF (adjust as needed)
+        samesite="None",  # Prevent CSRF (adjust as needed)
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,  # Expiry in seconds
     )
     return {
