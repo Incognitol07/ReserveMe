@@ -2,7 +2,6 @@
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from app.database import engine, Base, get_db
 from app.config import settings
@@ -15,16 +14,6 @@ from app.routers import (
 )
 from app.background_tasks import scheduler, start_scheduler
 import time
-
-
-class SecureHeadersMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        response = await call_next(request)
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        return response
 
 
 # Create the FastAPI application
@@ -62,8 +51,6 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type"],  # Limit allowed headers
 )
 
-# Add secure headers middleware
-app.add_middleware(SecureHeadersMiddleware)
 
 # Include routers
 app.include_router(auth_router, tags=["Authentication"])
