@@ -1,9 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from starlette.middleware.trustedhost import TrustedHostMiddleware
-from starlette.middleware.security import SecurityHeadersMiddleware
-from starlette.middleware import ProxyHeadersMiddleware
 from app.database import engine, Base, get_db
 from app.config import settings
 from app.utils import logger, seed_admin
