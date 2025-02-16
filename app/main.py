@@ -1,8 +1,9 @@
-# app/main.py
-
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.middleware.security import SecurityHeadersMiddleware
+from starlette.middleware import ProxyHeadersMiddleware
 from app.database import engine, Base, get_db
 from app.config import settings
 from app.utils import logger, seed_admin
@@ -40,6 +41,30 @@ app = FastAPI(
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
     openapi_url="/openapi.json" if settings.DEBUG else None
+)
+
+# Security middleware
+app.add_middleware(
+    ProxyHeadersMiddleware,
+    trusted_hosts=settings.PROXY_TRUSTED_HOSTS
+)
+app.add_middleware(
+    TrustedHostMiddleware,
+    allowed_hosts=settings.ALLOWED_HOSTS
+)
+app.add_middleware(
+    SecurityHeadersMiddleware,
+    max_age=63072000,  # Enables HSTS with 2 years duration
+    include_subdomains=True,
+    preload=True,
+    content_security_policy="default-src 'self'",
+    referrer_policy="strict-origin-when-cross-origin",
+    permissions_policy="geolocation=(), camera=(), microphone=()",
+    x_content_type_options="nosniff",
+    headers={
+        "X-Frame-Options": "DENY",
+        "X-XSS-Protection": "1; mode=block"
+    }
 )
 
 # CORS settings
