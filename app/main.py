@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.database import engine, Base, get_db
+from app.database import engine, Base
 from app.config import settings
 from app.utils import logger, seed_admin
 from app.routers import (
@@ -10,6 +10,7 @@ from app.routers import (
     booking_router,
     profile_router
 )
+from app.models import *
 from app.background_tasks import scheduler, start_scheduler
 import time
 
@@ -81,4 +82,8 @@ async def log_requests(request: Request, call_next):
 # Root endpoint for health check
 @app.get("/", tags=["Health"])
 def read_root():
-    return {"message": f"{settings.APP_NAME} is running"}
+    return {
+        "message": f"{settings.APP_NAME} is running",
+        "docs": "/docs" if settings.DEBUG else "Disabled",
+        "redoc": "/redoc" if settings.DEBUG else "Disabled",
+        }
