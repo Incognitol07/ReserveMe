@@ -107,42 +107,9 @@ Create a `.env` file:
 - **Create, Update, and Cancel Bookings**: Handle bookings with ease, specifying time slots and additional preferences.
 - **Booking Reminders**: Receive automated reminders for upcoming bookings.
 
-### Notifications
-
-- **Email or In-App Notifications**: Stay updated with booking confirmations, reminders, and updates.
-
-## Project Structure
-
-```plaintext
-ReserveMe/
-├── app/
-│   ├── main.py              # Application entry point
-│   ├── routers/             # API endpoint routers
-│   ├── schemas/             # Pydantic models for request validation
-│   ├── utils/               # Utility functions (e.g., scheduling, notifications)
-│   ├── models/              # SQLAlchemy models
-│   ├── database.py          # Database connection and session handling
-│   └── config.py            # Configuration settings
-├── requirements.txt         # Dependencies
-├── .env                     # Environment variables
-└── README.md                # Project documentation
-```
-
 ## Testing the API
 
 You can test the API using **curl**, **Postman**, or FastAPI's interactive docs at <http://127.0.0.1:8000/docs>.
-
-### Example Request
-
-To create a new booking:
-
-```bash
-curl -X POST "http://127.0.0.1:8000/spaces" -H "accept: application/json" -H "Content-Type: application/json" -d '{"space_id": 1, "start_time": "2025-01-14T09:00:00", "end_time": "2025-01-14T11:00:00"}'
-```
-
-## Conclusion
-
-The **ReserveMe API** provides a comprehensive system for managing and automating space bookings. With its secure user authentication, real-time availability tracking, and automated notifications, it ensures a seamless experience for both individual users and teams.
 
 ## License
 
