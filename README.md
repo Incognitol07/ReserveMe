@@ -82,7 +82,7 @@ Update the values inside `.env` as needed.
 
 ---
 
-## 🚀 Running the Application
+## Running the Application
 
 1. **Start the FastAPI server:**
 
@@ -94,7 +94,7 @@ Update the values inside `.env` as needed.
 
 ---
 
-## 🧪 Testing the API
+## Testing the API
 
 You can test the API using:
 
