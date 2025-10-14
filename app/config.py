@@ -5,9 +5,9 @@ import os
 
 class Settings(BaseSettings):
     # Application settings
-    APP_NAME: str
+    APP_NAME: str = "ReserveMe"
     APP_DESCRIPTION: str= "ReserveMe simplifies the process of booking and managing spaces, such as meeting rooms, event halls, or workspaces."
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT")
+    ENVIRONMENT: str = "development"  # Options: development, production
     DEBUG: bool = ENVIRONMENT == "development"
 
     DATABASE_URL: str
