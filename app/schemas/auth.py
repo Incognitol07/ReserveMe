@@ -1,56 +1,71 @@
 # app/schemas/auth.py
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from uuid import UUID
 from datetime import datetime
 
 
-# Base schema for user-related attributes
 class UserBase(BaseModel):
-    email: EmailStr
+    """Base schema containing common user attributes."""
+
+    email: EmailStr = Field(..., description="User's email address")
 
 
 class UserCreate(UserBase):
-    username: str
-    phone_number: str
-    password: str
+    """Schema for creating a new user account."""
+
+    username: str = Field(..., description="Desired username")
+    phone_number: str = Field(..., description="User's phone number")
+    password: str = Field(..., description="Password for the account")
 
 
 class UserLogin(UserBase):
-    password: str
+    """Schema for user login credentials."""
+
+    password: str = Field(..., description="User's password")
 
 
 class UserResponse(BaseModel):
-    id: UUID
-    username: str
-    email: EmailStr
-    phone_number: str
-    joined_at: datetime
-    last_login: datetime | None
-    is_active: bool
+    """Response schema containing user information."""
+
+    id: UUID = Field(..., description="Unique user ID")
+    username: str = Field(..., description="User's username")
+    email: EmailStr = Field(..., description="User's email address")
+    phone_number: str = Field(..., description="User's phone number")
+    joined_at: datetime = Field(..., description="Account creation timestamp")
+    last_login: datetime | None = Field(None, description="Last login timestamp")
+    is_active: bool = Field(..., description="Account active status")
 
     class Config:
         from_attributes = True
 
 
 class RegisterResponse(BaseModel):
-    username: str
-    email: EmailStr
-    message: str
+    """Response schema for user registration confirmation."""
+
+    username: str = Field(..., description="Registered username")
+    email: EmailStr = Field(..., description="Registered email")
+    message: str = Field(..., description="Confirmation message")
 
 
 class LoginResponse(BaseModel):
-    access_token: str
-    token_type: str
-    user_id: UUID
-    username: str
-    role: str
+    """Response schema containing authentication tokens and user info."""
+
+    access_token: str = Field(..., description="JWT access token")
+    token_type: str = Field(..., description="Token type (e.g., Bearer)")
+    user_id: UUID = Field(..., description="User ID")
+    username: str = Field(..., description="Username")
+    role: str = Field(..., description="User role")
 
 
 class DetailResponse(BaseModel):
-    detail: str
+    """Generic response schema for error or detail messages."""
+
+    detail: str = Field(..., description="Detail message")
 
 
 class RefreshResponse(BaseModel):
-    access_token: str
-    token_type: str
+    """Response schema for token refresh."""
+
+    access_token: str = Field(..., description="New access token")
+    token_type: str = Field(..., description="Token type")

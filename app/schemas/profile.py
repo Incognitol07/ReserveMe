@@ -1,13 +1,19 @@
 # app/schemas/profile.py
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 
+
 class UpdatePasswordRequest(BaseModel):
-    current_password: str
-    new_password: str
+    """Schema for updating user password."""
+
+    current_password: str = Field(..., description="Current password for verification")
+    new_password: str = Field(..., description="New password to set")
+
 
 class UpdateProfileRequest(BaseModel):
-    username: Optional[str]
-    email: Optional[EmailStr]
-    phone_number: Optional[str]
+    """Schema for updating user profile information."""
+
+    username: Optional[str] = Field(None, description="Updated username")
+    email: Optional[EmailStr] = Field(None, description="Updated email address")
+    phone_number: Optional[str] = Field(None, description="Updated phone number")
