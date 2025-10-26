@@ -62,6 +62,13 @@ async def create_space(
     Create a new space. Admin only.
     """
     try:
+        existing_space = db.query(Space).filter(Space.name == space_data.name).first()
+        if existing_space:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Space name already taken"
+            )
+
         new_space = Space(**space_data.model_dump())
         db.add(new_space)
         db.commit()
