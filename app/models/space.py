@@ -1,13 +1,26 @@
 # app/models/space.py
 
 from uuid import uuid4
-from sqlalchemy import Column, UUID, Integer,String, Boolean, DateTime, Text, Float, JSON
+from sqlalchemy import (
+    Column,
+    UUID,
+    Integer,
+    String,
+    Boolean,
+    DateTime,
+    Text,
+    Float,
+    JSON,
+)
 from sqlalchemy.ext.mutable import MutableList
 from sqlalchemy.orm import relationship
 from app.database import Base
 from datetime import datetime
 
+
 class Space(Base):
+    """SQLAlchemy model representing a bookable space."""
+
     __tablename__ = "spaces"
 
     id = Column(UUID(as_uuid=True), default=uuid4, primary_key=True, index=True)

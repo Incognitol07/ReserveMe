@@ -6,7 +6,10 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
 
+
 class Booking(Base):
+    """SQLAlchemy model representing a booking reservation."""
+
     __tablename__ = "bookings"
 
     id = Column(UUID(as_uuid=True), default=uuid4, primary_key=True, index=True)
@@ -15,7 +18,9 @@ class Booking(Base):
     space_id = Column(UUID(as_uuid=True), ForeignKey("spaces.id"), nullable=False)
     start_time = Column(DateTime, nullable=False)
     end_time = Column(DateTime, nullable=False)
-    status = Column(String, default="pending", nullable=False)  # Options: pending, confirmed, canceled
+    status = Column(
+        String, default="pending", nullable=False
+    )  # Options: pending, confirmed, canceled
     total_cost = Column(Float, nullable=False)
     purpose = Column(Text, nullable=False)
     tx_ref = Column(String, nullable=True)

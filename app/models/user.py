@@ -6,7 +6,10 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from app.database import Base
 
+
 class User(Base):
+    """SQLAlchemy model representing a user in the system."""
+
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), default=uuid4, primary_key=True, index=True)
