@@ -1,109 +1,61 @@
 # app/utils/security.py
 
-import os
-import jwt
-from fastapi import HTTPException, status
+from jose import JWTError, jwt
+from fastapi import HTTPException, status, HTTPException
 from datetime import datetime, timedelta, timezone
 from passlib.context import CryptContext
 from pydantic import ValidationError
+from app.config import settings
 
-# Password hashing context
+
+# Password hashing context using bcrypt
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 # Hash a password
 def hash_password(password: str) -> str:
-    """
-    Hash a password using bcrypt hashing algorithm.
-
-    Args: \n
-        password (str): The plain text password to be hashed.
-
-    Returns:
-        str: The hashed password.
-    """
     return pwd_context.hash(password)
 
 
 # Verify a password against its hashed version
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """
-    Verify if the provided password matches the hashed password.
-
-    Args: \n
-        plain_password (str): The plain text password.
-        hashed_password (str): The hashed password to compare with.
-
-    Returns:
-        bool: True if the passwords match, otherwise False.
-    """
     return pwd_context.verify(plain_password, hashed_password)
 
 
 # JWT configuration
-SECRET_KEY = os.getenv(
-    "JWT_SECRET_KEY"
-)  # Ensure the JWT_SECRET_KEY is set in the environment
+SECRET_KEY = settings.JWT_SECRET_KEY
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Expiry time in minutes for access token
+ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
 
-# Create an access token with expiration time
 def create_access_token(data: dict) -> str:
-    """
-    Create a JWT access token with an expiration time.
-
-    Args: \n
-        data (dict): The data to encode in the JWT token.
-
-    Returns:
-        str: The generated JWT access token.
-    """
-    to_encode = (
-        data.copy()
-    )  # Create a copy of the data dictionary to avoid modifying the original
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
-    )  # Use UTC time for consistency
-    to_encode.update({"token_type": "access"})
-    to_encode.update({"exp": expire})  # Add expiration time to the payload
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"token_type": "access", "exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
 
-# Verify and decode the access token
 def verify_access_token(token: str) -> dict:
-    """
-    Verify and decode the JWT access token.
-
-    Args: \n
-        token (str): The JWT token to verify and decode.
-
-    Returns:
-        dict: The decoded payload of the JWT token.
-
-    Raises:
-        HTTPException: If the token is expired, invalid, or malformed.
-    """
     try:
-        payload = jwt.decode(
-            token, SECRET_KEY, algorithms=[ALGORITHM]
-        )  # Decode the token using the secret key
-        if payload["token_type"] != "access":
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("token_type") != "access":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token type for access",
             )
         return payload
-    except jwt.ExpiredSignatureError:
+    except JWTError as e:  # Unified JWTError handling
+        error_msg = str(e).lower()
+        if "expired" in error_msg:
+            detail = "Token has expired"
+        elif "invalid" in error_msg:
+            detail = "Invalid token"
+        else:
+            detail = "Token verification failed"
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    except jwt.InvalidTokenError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
+            detail=detail,
             headers={"WWW-Authenticate": "Bearer"},
         )
     except ValidationError:
@@ -113,57 +65,101 @@ def verify_access_token(token: str) -> dict:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+
 # Refresh token expiration time (e.g., 7 days)
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 
-# Create a refresh token with a longer expiration time
+
 def create_refresh_token(data: dict) -> str:
-    """
-    Create a JWT refresh token with a longer expiration time.
-
-    Args:
-        data (dict): The data to encode in the JWT token.
-
-    Returns:
-        str: The generated JWT refresh token.
-    """
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
-    to_encode.update({"token_type": "refresh"})
-    to_encode.update({"exp": expire})
+    to_encode.update({"token_type": "refresh", "exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-# Verify and decode the refresh token
+
 def verify_refresh_token(token: str) -> dict:
-    """
-    Verify and decode the JWT refresh token.
-
-    Args:
-        token (str): The JWT token to verify and decode.
-
-    Returns:
-        dict: The decoded payload of the JWT token.
-
-    Raises:
-        HTTPException: If the token is expired, invalid, or malformed.
-    """
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        if payload["token_type"] != "refresh":
+        if payload.get("token_type") != "refresh":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid token type for refresh",
             )
         return payload
-    except jwt.ExpiredSignatureError:
+    except JWTError as e:  # Unified JWTError handling
+        error_msg = str(e).lower()
+        if "expired" in error_msg:
+            detail = "Refresh token has expired"
+        else:
+            detail = "Invalid refresh token"
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token has expired",
+            detail=detail,
             headers={"WWW-Authenticate": "Bearer"},
         )
-    except jwt.InvalidTokenError:
+
+
+# Password reset token expiration time (1 hour)
+PASSWORD_RESET_TOKEN_EXPIRE_MINUTES = 60
+
+
+def create_password_reset_token(data: dict) -> str:
+    """
+    Create a password reset token with 1-hour expiration.
+
+    Args:
+        data: Dictionary containing user information (typically user_id)
+
+    Returns:
+        JWT token string for password reset
+    """
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(
+        minutes=PASSWORD_RESET_TOKEN_EXPIRE_MINUTES
+    )
+    to_encode.update({"token_type": "password_reset", "exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def verify_password_reset_token(token: str) -> dict:
+    """
+    Verify a password reset token and return the payload.
+
+    Args:
+        token: The password reset token to verify
+
+    Returns:
+        Dictionary containing the token payload
+
+    Raises:
+        HTTPException: If token is invalid, expired, or wrong type
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("token_type") != "password_reset":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type for password reset",
+            )
+        return payload
+    except JWTError as e:  # Unified JWTError handling
+        error_msg = str(e).lower()
+        if "expired" in error_msg:
+            detail = (
+                "Password reset token has expired. Please request a new reset link."
+            )
+        elif "invalid" in error_msg:
+            detail = "Invalid password reset token"
+        else:
+            detail = "Password reset token verification failed"
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid refresh token",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail=detail,
+        )
+    except ValidationError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Malformed password reset token",
         )

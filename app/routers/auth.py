@@ -101,6 +101,7 @@ async def user_login(
                 detail="Account locked. Try again later.",
             )
 
+    logger.info(f"{user.password}, {db_user.password}")
     # Verify the password
     if not verify_password(user.password, db_user.password):
         db_user.failed_login_attempts += 1
